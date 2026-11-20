@@ -1,156 +1,198 @@
-.panel {
+.page {
   position: relative;
   display: grid;
-  place-items: center;
-  container-type: inline-size;
-  overflow: hidden;
-  color: #eff4ff;
-  background: radial-gradient(
-    ellipse at 52% 43%,
-    #192955,
-    #0a1022 53%,
-    #080c16 82%
+  grid-template-columns: minmax(0, 1.2fr) minmax(20rem, 0.9fr);
+  gap: clamp(1rem, 4vw, 5rem);
+  align-items: center;
+  min-height: 100svh;
+  padding: 6.5rem max(6vw, calc((100vw - 78rem) / 2));
+  color: #f7f5ff;
+  background:
+    radial-gradient(ellipse at 18% 65%, #4276b66b, transparent 44%),
+    radial-gradient(ellipse at 85% 32%, #9859b474, transparent 44%),
+    radial-gradient(ellipse at 42% 6%, #52476e, transparent 65%),
+    linear-gradient(120deg, #101a32, #242540 50%, #1a152d);
+  isolation: isolate;
+}
+.page::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  background: linear-gradient(
+    132deg,
+    transparent 15%,
+    #8ddcf31c 27%,
+    transparent 34%,
+    transparent 47%,
+    #c2a1ff1e 53%,
+    transparent 66%
   );
 }
 .brand {
   position: absolute;
   top: 2rem;
-  left: 2rem;
-  font-size: 1.15rem;
+  left: 6vw;
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  font-size: 1.25rem;
   font-weight: 600;
   letter-spacing: -0.045em;
 }
-.stage {
-  width: min(82%, 32rem);
-  perspective: 900px;
+.brand svg {
+  color: #e4d9ff;
 }
-.orbit {
-  width: 48%;
-  aspect-ratio: 1;
-  margin: 0 auto 8%;
-  transform: rotateZ(-26deg) rotateX(-12deg);
-  transform-style: preserve-3d;
+.scene {
+  display: grid;
+  place-items: center;
+  perspective: 1100px;
 }
-.globe {
+.chat {
   position: relative;
-  height: 100%;
+  width: 100%;
+  max-width: 38rem;
+  aspect-ratio: 1.13;
   transform-style: preserve-3d;
-  animation: spin 24s linear infinite;
 }
-.globe i {
+.sculpture {
   position: absolute;
-  inset: 0;
-  border: 1.5px solid #abb9ffb0;
-  border-top-color: #eefbff;
-  border-right-color: #8597f259;
-  border-radius: 50%;
-  box-shadow: inset 1px 0 3px #93cfff60;
-  transform: rotateY(var(--angle));
+  inset: -7% -3%;
+  background: center / contain no-repeat url("./glass-loop.webp");
 }
-.thread {
-  display: grid;
-  gap: 0.9rem;
-  font-size: clamp(0.86rem, 2.6cqw, 1.05rem);
-  line-height: 1.5;
-  transform: rotateY(-8deg) rotateX(5deg);
-  transform-style: preserve-3d;
+.prompt,
+.reply,
+.formPanel {
+  background: linear-gradient(132deg, #f3eeff25, #e2e1ff0c 46%, #ddc6ff16);
+  border: 1px solid #ffffff4a;
+  border-top-color: #ffffff85;
+  border-left-color: #ffffff6b;
+  box-shadow:
+    inset 0 1px 0 #ffffff25,
+    inset 0 -1px 1px #d7c6ff26,
+    0 20px 48px -18px #060518ad;
+  backdrop-filter: blur(20px) saturate(145%);
 }
-.question,
-.answer {
-  padding: 0.9em 1.15em;
-  border: 1px solid #ffffff27;
-  box-shadow: 0 12px 35px #06081560;
+.prompt,
+.reply {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  max-width: 88%;
+  padding: 0.9em 1.1em;
+  font-size: clamp(0.79rem, 1.25vw, 1rem);
+  line-height: 1.4;
+  border-radius: 1.2rem;
 }
-.question {
-  justify-self: end;
-  background: linear-gradient(125deg, #4e5397, #363f71);
-  border-radius: 1.15em 1.15em 0.28em 1.15em;
-  animation: send 10s both infinite;
+.prompt {
+  top: 1%;
+  right: 2%;
+  transform: rotate(3deg);
+  animation: drift 6.4s ease-in-out infinite alternate;
 }
-.answer {
-  display: grid;
-  width: 83%;
-  background: linear-gradient(130deg, #262e44, #161c2d);
-  border-radius: 1.15em 1.15em 1.15em 0.28em;
-  animation: receive 10s both infinite;
+.reply {
+  bottom: 0;
+  left: 2%;
+  transform: rotate(-3deg);
+  animation: drift 6.4s -3.2s ease-in-out infinite alternate;
 }
-.answer span {
-  grid-area: 1 / 1;
+.prompt svg,
+.reply svg {
+  flex-shrink: 0;
+  color: #d3dfff;
 }
-.typing {
-  align-self: center;
-  font-size: 0.7em;
-  color: #acbaff;
-  letter-spacing: 0.18em;
-  animation: typing 10s infinite;
+.formPanel {
+  position: relative;
+  justify-self: center;
+  width: 100%;
+  max-width: 26rem;
+  padding: clamp(1.65rem, 3.4vw, 3rem);
+  color-scheme: dark;
+  border-radius: 2rem;
 }
-.words {
-  animation: reveal 10s infinite;
+.formPanel h1 {
+  margin-bottom: 0.6rem;
+  font-size: clamp(1.85rem, 3vw, 2.4rem);
+  line-height: 1.15;
+  letter-spacing: -0.055em;
 }
-@keyframes spin {
+.formPanel p,
+.formPanel label {
+  color: #e0deed;
+}
+.formPanel form {
+  gap: 1.25rem;
+  margin-top: 2rem;
+}
+.formPanel input {
+  height: 2.9rem;
+  color: white;
+  background: #17152866;
+  border-color: #ffffff42;
+  box-shadow: inset 0 1px 4px #09051228;
+}
+.formPanel input::placeholder {
+  color: #bab7cd;
+}
+.formPanel input:focus-visible {
+  outline: 2px solid #c7c1ff6b;
+  outline-offset: 2px;
+  border-color: #d3c8ff;
+}
+.formPanel button[type="submit"],
+.formPanel form button:disabled {
+  min-height: 2.85rem;
+  font-weight: 650;
+  color: #221f38;
+  background: linear-gradient(120deg, #ece9ff, #d6e8ff);
+  box-shadow:
+    inset 0 1px 0 white,
+    0 4px 14px #17103145;
+}
+.formPanel a {
+  color: white;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@keyframes drift {
   to {
-    transform: rotateY(360deg);
-  }
-}
-@keyframes send {
-  0%,
-  100% {
-    opacity: 0;
-    transform: translate3d(12px, 12px, -30px);
-  }
-  10%,
-  91% {
-    opacity: 1;
-    transform: translateZ(12px);
-  }
-}
-@keyframes receive {
-  0%,
-  15%,
-  100% {
-    opacity: 0;
-    transform: translate3d(-10px, 12px, -20px);
-  }
-  25%,
-  91% {
-    opacity: 1;
-    transform: translateZ(25px);
-  }
-}
-@keyframes typing {
-  0%,
-  24%,
-  34% {
-    opacity: 1;
-  }
-  29% {
-    opacity: 0.25;
-  }
-  39%,
-  100% {
-    opacity: 0;
-  }
-}
-@keyframes reveal {
-  0%,
-  39% {
-    clip-path: inset(0 100% 0 0);
-  }
-  62%,
-  100% {
-    clip-path: inset(0);
-  }
-}
-@media (width < 48rem) {
-  .panel {
-    display: none;
+    translate: 0 -8px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .panel * {
+  .sculpture {
+    background-image: url("./glass-still.webp");
+  }
+  .prompt,
+  .reply {
     animation: none;
   }
-  .typing {
-    visibility: hidden;
+}
+@media (max-width: 48rem) {
+  .page {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    align-content: center;
+    padding: 5rem 1.35rem 2rem;
+  }
+  .brand {
+    top: 1.25rem;
+    left: 1.5rem;
+  }
+  .scene {
+    height: clamp(7rem, 19svh, 11rem);
+  }
+  .chat {
+    width: 100%;
+    height: 100%;
+  }
+  .prompt,
+  .reply {
+    display: none;
+  }
+  .formPanel {
+    max-width: 25rem;
   }
 }

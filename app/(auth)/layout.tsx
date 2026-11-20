@@ -1,5 +1,7 @@
+import { Layers3 } from "lucide-react";
 import { Toaster } from "sonner";
 import { ConversationScene } from "@/components/auth/conversation-scene";
+import styles from "@/components/auth/conversation-scene.module.css";
 
 export default function AuthLayout({
   children,
@@ -7,13 +9,15 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <main className="grid min-h-svh bg-background md:grid-cols-[1.1fr_1fr]">
+    <main className={styles.page}>
+      <div className={styles.brand}>
+        <Layers3 size={21} />
+        Ai-chat
+      </div>
       <ConversationScene />
-      <section className="flex items-center justify-center px-6 py-12 sm:px-12">
+      <section className={styles.formPanel}>
         <Toaster position="top-center" />
-        <div className="flex w-full max-w-sm flex-col gap-2 [&_form]:mt-6">
-          {children}
-        </div>
+        {children}
       </section>
     </main>
   );

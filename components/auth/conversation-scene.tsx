@@ -1,32 +1,17 @@
-import type { CSSProperties } from "react";
+import { AudioLines, Sparkles } from "lucide-react";
 import styles from "./conversation-scene.module.css";
-
-const longitudes = Array.from({ length: 32 }, (_, index) => (index * 180) / 32);
 
 export function ConversationScene() {
   return (
-    <aside aria-hidden="true" className={styles.panel}>
-      <div className={styles.brand}>Ai-chat</div>
-      <div className={styles.stage}>
-        <div className={styles.orbit}>
-          <div className={styles.globe}>
-            {longitudes.map((angle) => (
-              <i
-                key={angle}
-                style={{ "--angle": `${angle}deg` } as CSSProperties}
-              />
-            ))}
-          </div>
+    <aside aria-hidden="true" className={styles.scene}>
+      <div className={styles.chat}>
+        <div className={styles.prompt}>
+          <AudioLines size={17} /> What does light sound like?
         </div>
-        <div className={styles.thread}>
-          <div className={styles.question}>Why does the Moon change shape?</div>
-          <div className={styles.answer}>
-            <span className={styles.typing}>● ● ●</span>
-            <span className={styles.words}>
-              As the Moon orbits Earth, we see different portions of its sunlit
-              half.
-            </span>
-          </div>
+        <div className={styles.sculpture} />
+        <div className={styles.reply}>
+          <Sparkles size={18} />
+          <span>Imagine a chord made of color.</span>
         </div>
       </div>
     </aside>
