@@ -61,10 +61,14 @@ const PureChatItem = ({
     <SidebarMenuItem>
       <SidebarMenuButton
         asChild
-        className="h-8 rounded-none text-[13px] text-sidebar-foreground/50 transition-all duration-150 hover:bg-transparent hover:text-sidebar-foreground data-active:bg-transparent data-active:font-normal data-active:text-sidebar-foreground/50 data-[active=true]:text-sidebar-foreground data-[active=true]:font-medium data-[active=true]:border-b data-[active=true]:border-dashed data-[active=true]:border-sidebar-foreground/50"
+        className="h-9 rounded-md pr-8 text-sm data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium"
         isActive={isActive}
       >
-        <Link href={`/chat/${chat.id}`} onClick={closeMobile}>
+        <Link
+          href={`/chat/${chat.id}`}
+          onClick={closeMobile}
+          title={chat.title}
+        >
           <span className="truncate">{chat.title}</span>
         </Link>
       </SidebarMenuButton>
@@ -124,9 +128,4 @@ const PureChatItem = ({
   );
 };
 
-export const ChatItem = memo(PureChatItem, (prevProps, nextProps) => {
-  if (prevProps.isActive !== nextProps.isActive) {
-    return false;
-  }
-  return true;
-});
+export const ChatItem = memo(PureChatItem);

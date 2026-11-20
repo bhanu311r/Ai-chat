@@ -16,6 +16,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import type { ArtifactKind } from "@/components/chat/artifact";
 import type { VisibilityType } from "@/components/chat/visibility-selector";
+import { titleFromFirstPrompt } from "../chat-title";
 import { ChatbotError } from "../errors";
 import {
   type Chat,
@@ -189,8 +190,31 @@ export async function getChatsByUserId({
 
     const hasMore = filteredChats.length > limit;
 
+    const chats = filteredChats.slice(0, limit);
+    const untitled = chats
+      .filter((row) => row.title === "New chat")
+      .map((row) => row.id);
+    if (untitled.length) {
+      const firstMessages = await db
+        .selectDistinctOn([message.chatId], {
+          chatId: message.chatId,
+          parts: message.parts,
+        })
+        .from(message)
+        .where(and(inArray(message.chatId, untitled), eq(message.role, "user")))
+        .orderBy(message.chatId, asc(message.createdAt), asc(message.id));
+      const titles = new Map(
+        firstMessages.map((row) => [
+          row.chatId,
+          titleFromFirstPrompt(row.parts),
+        ])
+      );
+      for (const row of chats) {
+        row.title = titles.get(row.id) ?? row.title;
+      }
+    }
     return {
-      chats: hasMore ? filteredChats.slice(0, limit) : filteredChats,
+      chats,
       hasMore,
     };
   } catch (error) {
@@ -496,20 +520,6 @@ export async function updateChatVisibilityById({
     return await db.update(chat).set({ visibility }).where(eq(chat.id, chatId));
   } catch (error) {
     throw new ChatbotError("bad_request:database", { cause: error });
-  }
-}
-
-export async function updateChatTitleById({
-  chatId,
-  title,
-}: {
-  chatId: string;
-  title: string;
-}) {
-  try {
-    return await db.update(chat).set({ title }).where(eq(chat.id, chatId));
-  } catch {
-    // Best effort title update.
   }
 }
 

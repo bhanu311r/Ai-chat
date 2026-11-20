@@ -15,7 +15,6 @@ import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
 import { auth } from "@/app/(auth)/auth";
 import { maxMessagesPerHour } from "@/lib/ai/entitlements";
-import { generateTitleFromUserMessage } from "@/lib/ai/generate-title";
 import { getModelCatalog } from "@/lib/ai/openrouter-models";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
@@ -24,6 +23,7 @@ import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
+import { titleFromFirstPrompt } from "@/lib/chat-title";
 import { isProductionEnvironment, isTestEnvironment } from "@/lib/constants";
 import {
   createStreamId,
@@ -33,7 +33,6 @@ import {
   getMessagesByChatId,
   saveChat,
   saveMessages,
-  updateChatTitleById,
   updateMessage,
 } from "@/lib/db/queries";
 import type { DBMessage } from "@/lib/db/schema";
@@ -136,7 +135,7 @@ export async function POST(request: Request) {
 
     const chat = await getChatById({ id });
     let messagesFromDb: DBMessage[] = [];
-    let titlePromise: Promise<string | null> | null = null;
+    let newChatTitle: string | undefined;
 
     if (chat) {
       if (chat.userId !== session.user.id) {
@@ -144,16 +143,13 @@ export async function POST(request: Request) {
       }
       messagesFromDb = await getMessagesByChatId({ id });
     } else if (message?.role === "user") {
+      newChatTitle = titleFromFirstPrompt(message.parts);
       await saveChat({
         id,
-        title: "New chat",
+        title: newChatTitle,
         userId: session.user.id,
         visibility: selectedVisibilityType,
       });
-      titlePromise = generateTitleFromUserMessage({
-        message,
-        modelId: chatModel,
-      }).catch(() => null);
     }
 
     let uiMessages: ChatMessage[];
@@ -224,7 +220,10 @@ export async function POST(request: Request) {
     const modelMessages = await convertToModelMessages(uiMessages);
 
     const stream = createUIMessageStream({
-      execute: async ({ writer: dataStream }) => {
+      execute: ({ writer: dataStream }) => {
+        if (newChatTitle) {
+          dataStream.write({ data: newChatTitle, type: "data-chat-title" });
+        }
         const modelName = modelConfig?.name ?? chatModel;
         let hasModelActivity = false;
         let waitingStatusTimer: ReturnType<typeof setTimeout> | undefined;
@@ -334,18 +333,6 @@ export async function POST(request: Request) {
             stream: result.stream,
           })
         );
-
-        if (titlePromise) {
-          try {
-            const title = await titlePromise;
-            if (title) {
-              dataStream.write({ data: title, type: "data-chat-title" });
-              await updateChatTitleById({ chatId: id, title });
-            }
-          } catch {
-            /* non-fatal */
-          }
-        }
       },
       generateId: generateUUID,
       onEnd: async ({ messages: finishedMessages }) => {

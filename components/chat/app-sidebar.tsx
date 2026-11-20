@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  MessageSquareIcon,
-  PanelLeftIcon,
-  PenSquareIcon,
-  TrashIcon,
-} from "lucide-react";
+import { Layers3, PanelLeftIcon, PenSquareIcon, TrashIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "next-auth";
@@ -90,16 +85,24 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               <div className="group/logo relative flex items-center justify-center">
                 <SidebarMenuButton
                   asChild
-                  className="size-8 !px-0 items-center justify-center group-data-[collapsible=icon]:group-hover/logo:opacity-0"
-                  tooltip="Chatbot"
+                  className="w-auto gap-2 font-semibold group-data-[collapsible=icon]:group-hover/logo:opacity-0"
+                  tooltip="Ai-chat"
                 >
-                  <Link href="/" onClick={closeMobile}>
-                    <MessageSquareIcon className="size-4 text-sidebar-foreground/50" />
+                  <Link
+                    aria-label="Ai-chat home"
+                    href="/"
+                    onClick={closeMobile}
+                  >
+                    <Layers3 className="size-4" />
+                    <span className="group-data-[collapsible=icon]:hidden">
+                      Ai-chat
+                    </span>
                   </Link>
                 </SidebarMenuButton>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <SidebarMenuButton
+                      aria-label="Open sidebar"
                       className="pointer-events-none absolute inset-0 size-8 opacity-0 group-data-[collapsible=icon]:pointer-events-auto group-data-[collapsible=icon]:group-hover/logo:opacity-100"
                       onClick={handleToggleSidebar}
                     >

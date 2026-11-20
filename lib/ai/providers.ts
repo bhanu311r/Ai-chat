@@ -24,10 +24,3 @@ export function getLanguageModel(modelId: string) {
 
   return openrouter.chat(modelId);
 }
-
-export function getTitleModel(modelId: string) {
-  if (isTestEnvironment && myProvider) {
-    return myProvider.languageModel("title-model");
-  }
-  return openrouter.chat(modelId);
-}
