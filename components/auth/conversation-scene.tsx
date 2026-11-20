@@ -1,17 +1,26 @@
-import { AudioLines, Sparkles } from "lucide-react";
+import { AudioLines, Cpu, MessageSquareText } from "lucide-react";
 import styles from "./conversation-scene.module.css";
 
 export function ConversationScene() {
   return (
     <aside aria-hidden="true" className={styles.scene}>
-      <div className={styles.chat}>
-        <div className={styles.prompt}>
-          <AudioLines size={17} /> What does light sound like?
-        </div>
-        <div className={styles.sculpture} />
-        <div className={styles.reply}>
-          <Sparkles size={18} />
-          <span>Imagine a chord made of color.</span>
+      <div className={styles.brand}>
+        <MessageSquareText size={19} />
+        Ai-chat
+      </div>
+      <div className={styles.machine}>
+        <div className={styles.deck}>
+          <div className={styles.channel} />
+          <div className={styles.module}>
+            <AudioLines />
+          </div>
+          <div className={styles.module}>
+            <Cpu />
+          </div>
+          <div className={styles.module}>
+            <MessageSquareText />
+          </div>
+          <div className={styles.vents} />
         </div>
       </div>
     </aside>
