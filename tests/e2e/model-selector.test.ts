@@ -112,3 +112,28 @@ test("shows a catalog failure and loads models when retrying", async ({
   ).toBeVisible();
   await expect(retry).not.toBeVisible();
 });
+
+test("keeps chat open when a cached model response uses the old format", async ({
+  page,
+}) => {
+  let attempts = 0;
+  await page.route("**/api/models", async (route) => {
+    attempts += 1;
+    await route.fulfill({
+      json:
+        attempts === 1
+          ? { "old/model": { reasoning: false, tools: false, vision: false } }
+          : catalog,
+    });
+  });
+
+  await page.goto("/");
+  const modelButton = page.getByTestId("model-selector");
+  await modelButton.click();
+  await expect(page.getByTestId("multimodal-input")).toBeVisible();
+
+  await page.getByRole("button", { name: "Retry" }).click();
+  await expect(
+    page.getByRole("option", { name: fixtureModel.name })
+  ).toBeVisible();
+});

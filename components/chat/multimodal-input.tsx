@@ -32,14 +32,15 @@ import {
   ModelSelectorName,
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
-import type {
-  ChatModel,
-  ModelCapabilities,
-  ModelCatalog,
+import {
+  type ChatModel,
+  type ModelCapabilities,
+  type ModelCatalog,
+  modelCatalogSchema,
 } from "@/lib/ai/models";
 import { ChatbotError } from "@/lib/errors";
 import type { Attachment, ChatMessage } from "@/lib/types";
-import { cn, fetcher } from "@/lib/utils";
+import { cn, fetchWithErrorHandlers } from "@/lib/utils";
 import {
   PromptInput,
   PromptInputFooter,
@@ -65,10 +66,19 @@ function setCookie(name: string, value: string) {
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}`;
 }
 
+async function fetchModelCatalog(url: string) {
+  const response = await fetchWithErrorHandlers(url, { cache: "no-store" });
+  const catalog = modelCatalogSchema.safeParse(await response.json());
+  if (!catalog.success) {
+    throw new ChatbotError("offline:models");
+  }
+  return catalog.data;
+}
+
 function useModelCatalog() {
   return useSWR<ModelCatalog>(
     `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
-    fetcher,
+    fetchModelCatalog,
     { dedupingInterval: 60_000, shouldRetryOnError: false }
   );
 }
