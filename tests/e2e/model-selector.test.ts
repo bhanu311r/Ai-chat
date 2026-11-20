@@ -10,14 +10,9 @@ const routerModel = {
   name: "OpenRouter Free",
 };
 
-const paidModel = {
-  id: "fixture/paid",
-  name: "Paid Chat Model",
-};
-
 const catalog = {
   capabilities: {},
-  models: [paidModel, routerModel, fixtureModel],
+  models: [fixtureModel, routerModel],
 };
 
 test.describe("Model Selector", () => {
@@ -71,7 +66,7 @@ test.describe("Model Selector", () => {
     await expect(page.getByRole("option")).toHaveText(
       catalog.models.map((model) => model.name)
     );
-    await expect(modelButton).toHaveText(paidModel.name);
+    await expect(modelButton).toHaveText(fixtureModel.name);
   });
 
   test("can select a different model", async ({ page }) => {

@@ -4,6 +4,11 @@ import { z } from "zod";
 import { ChatbotError } from "@/lib/errors";
 import type { ModelCatalog } from "./models";
 
+const zeroPrice = z.union([z.literal(0), z.string().regex(/^0+(?:\.0+)?$/)]);
+const freePricing = z
+  .object({ completion: zeroPrice, prompt: zeroPrice })
+  .catchall(zeroPrice.nullable());
+
 const openRouterModelSchema = z.object({
   architecture: z
     .object({
@@ -14,6 +19,7 @@ const openRouterModelSchema = z.object({
   endpoints: z.array(z.string()).nullish(),
   id: z.string().min(1),
   name: z.string().min(1),
+  pricing: freePricing,
   supported_parameters: z.array(z.string()).nullish(),
 });
 

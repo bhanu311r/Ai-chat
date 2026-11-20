@@ -36,7 +36,7 @@
 
 ## Model Providers
 
-This app uses [OpenRouter](https://openrouter.ai/) through its official AI SDK provider. The picker lists all chat-compatible models returned by OpenRouter’s Models API for the server’s API key, in API order. It uses your saved selection when available and otherwise selects the first chat model.
+This app uses [OpenRouter](https://openrouter.ai/) through its official AI SDK provider. The picker lists all zero-cost chat-compatible models returned by OpenRouter’s Models API for the server’s API key, in API order. It uses your saved selection when available and otherwise selects the first chat model.
 
 Create an [OpenRouter API key](https://openrouter.ai/keys) and set `OPENROUTER_API_KEY` in `.env.local` for local use or in your Vercel Production environment before redeploying.
 
