@@ -1,6 +1,5 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { auth } from "@/app/(auth)/auth";
 import type { VisibilityType } from "@/components/chat/visibility-selector";
 import {
@@ -9,11 +8,6 @@ import {
   getMessageById,
   updateChatVisibilityById,
 } from "@/lib/db/queries";
-
-export async function saveChatModelAsCookie(model: string) {
-  const cookieStore = await cookies();
-  cookieStore.set("chat-model", model);
-}
 
 export async function deleteTrailingMessages({ id }: { id: string }) {
   const session = await auth();
