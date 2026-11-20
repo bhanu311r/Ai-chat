@@ -24,6 +24,7 @@ import {
   SidebarMenu,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useDraftHistoryTitle } from "@/hooks/use-draft-history-title";
 import type { Chat } from "@/lib/db/schema";
 import { fetcher } from "@/lib/utils";
 import { LoaderIcon } from "./icons";
@@ -123,9 +124,11 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     ? paginatedChatHistories.some((page) => page.hasMore === false)
     : false;
 
-  const hasEmptyChatHistory = paginatedChatHistories
-    ? paginatedChatHistories.every((page) => page.chats.length === 0)
-    : false;
+  const savedChats =
+    paginatedChatHistories?.flatMap((page) => page.chats) ?? [];
+  const draftTitle = useDraftHistoryTitle();
+  const showDraft =
+    draftTitle !== null && !savedChats.some((chat) => chat.id === id);
 
   const handleDelete = useCallback(() => {
     const chatToDelete = deleteId;
@@ -160,10 +163,10 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
   }, []);
 
   const handleViewportEnter = useCallback(() => {
-    if (!isValidating && !hasReachedEnd) {
+    if (!isLoading && !isValidating && !hasReachedEnd) {
       setSize((size) => size + 1);
     }
-  }, [hasReachedEnd, isValidating, setSize]);
+  }, [hasReachedEnd, isLoading, isValidating, setSize]);
 
   if (!user) {
     return (
@@ -177,7 +180,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     );
   }
 
-  if (isLoading) {
+  if (isLoading && !showDraft) {
     return (
       <SidebarGroup className="group-data-[collapsible=icon]:hidden">
         <SidebarGroupLabel className="text-xs font-medium text-muted-foreground">
@@ -206,7 +209,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     );
   }
 
-  if (hasEmptyChatHistory) {
+  if (!savedChats.length && !showDraft) {
     return (
       <SidebarGroup className="group-data-[collapsible=icon]:hidden">
         <SidebarGroupLabel className="text-xs font-medium text-muted-foreground">
@@ -229,14 +232,20 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
         </SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
-            {paginatedChatHistories
+            {showDraft ? (
+              <li
+                aria-current="page"
+                className="flex h-9 items-center rounded-md bg-sidebar-accent px-2 text-sm font-medium"
+                data-testid="draft-history-title"
+              >
+                <span className="truncate" title={draftTitle}>
+                  {draftTitle}
+                </span>
+              </li>
+            ) : null}
+            {savedChats.length > 0
               ? (() => {
-                  const chatsFromHistory = paginatedChatHistories.flatMap(
-                    (paginatedChatHistory) => paginatedChatHistory.chats
-                  );
-
-                  const groupedChats = groupChatsByDate(chatsFromHistory);
-
+                  const groupedChats = groupChatsByDate(savedChats);
                   return (
                     <div className="flex flex-col gap-4">
                       {groupedChats.today.length > 0 && (

@@ -22,6 +22,8 @@ import { getChatHistoryPaginationKey } from "@/components/chat/sidebar-history";
 import { toast } from "@/components/chat/toast";
 import type { VisibilityType } from "@/components/chat/visibility-selector";
 import { useAutoResume } from "@/hooks/use-auto-resume";
+import { DraftHistoryContext } from "@/hooks/use-draft-history-title";
+import { titleFromFirstPrompt } from "@/lib/chat-title";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { fetcher, fetchWithErrorHandlers, generateUUID } from "@/lib/utils";
@@ -279,9 +281,23 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
     ]
   );
 
+  const [firstMessage] = messages;
+  const isDraft = chatId === newChatIdRef.current;
+  const draftTitle = useMemo(() => {
+    if (!isDraft) {
+      return null;
+    }
+    if (firstMessage?.role === "user") {
+      return titleFromFirstPrompt(firstMessage.parts);
+    }
+    return isNewChat ? "New chat" : null;
+  }, [firstMessage, isDraft, isNewChat]);
+
   return (
     <ActiveChatContext.Provider value={value}>
-      {children}
+      <DraftHistoryContext.Provider value={draftTitle}>
+        {children}
+      </DraftHistoryContext.Provider>
     </ActiveChatContext.Provider>
   );
 }
