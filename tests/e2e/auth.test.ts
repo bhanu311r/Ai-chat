@@ -8,6 +8,8 @@ test.describe("Authentication Pages", () => {
   }) => {
     await page.goto("/");
     await expect(page).toHaveURL("/login");
+    await page.goto(`/chat/${randomUUID()}`);
+    await expect(page).toHaveURL("/login");
     expect((await request.get("/api/models")).status()).toBe(401);
     const providers = await request.get("/api/auth/providers");
     expect(Object.keys(await providers.json())).toEqual(["credentials"]);

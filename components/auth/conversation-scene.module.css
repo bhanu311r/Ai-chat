@@ -1,0 +1,156 @@
+.panel {
+  position: relative;
+  display: grid;
+  place-items: center;
+  container-type: inline-size;
+  overflow: hidden;
+  color: #eff4ff;
+  background: radial-gradient(
+    ellipse at 52% 43%,
+    #192955,
+    #0a1022 53%,
+    #080c16 82%
+  );
+}
+.brand {
+  position: absolute;
+  top: 2rem;
+  left: 2rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+}
+.stage {
+  width: min(82%, 32rem);
+  perspective: 900px;
+}
+.orbit {
+  width: 48%;
+  aspect-ratio: 1;
+  margin: 0 auto 8%;
+  transform: rotateZ(-26deg) rotateX(-12deg);
+  transform-style: preserve-3d;
+}
+.globe {
+  position: relative;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: spin 24s linear infinite;
+}
+.globe i {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid #abb9ffb0;
+  border-top-color: #eefbff;
+  border-right-color: #8597f259;
+  border-radius: 50%;
+  box-shadow: inset 1px 0 3px #93cfff60;
+  transform: rotateY(var(--angle));
+}
+.thread {
+  display: grid;
+  gap: 0.9rem;
+  font-size: clamp(0.86rem, 2.6cqw, 1.05rem);
+  line-height: 1.5;
+  transform: rotateY(-8deg) rotateX(5deg);
+  transform-style: preserve-3d;
+}
+.question,
+.answer {
+  padding: 0.9em 1.15em;
+  border: 1px solid #ffffff27;
+  box-shadow: 0 12px 35px #06081560;
+}
+.question {
+  justify-self: end;
+  background: linear-gradient(125deg, #4e5397, #363f71);
+  border-radius: 1.15em 1.15em 0.28em 1.15em;
+  animation: send 10s both infinite;
+}
+.answer {
+  display: grid;
+  width: 83%;
+  background: linear-gradient(130deg, #262e44, #161c2d);
+  border-radius: 1.15em 1.15em 1.15em 0.28em;
+  animation: receive 10s both infinite;
+}
+.answer span {
+  grid-area: 1 / 1;
+}
+.typing {
+  align-self: center;
+  font-size: 0.7em;
+  color: #acbaff;
+  letter-spacing: 0.18em;
+  animation: typing 10s infinite;
+}
+.words {
+  animation: reveal 10s infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotateY(360deg);
+  }
+}
+@keyframes send {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate3d(12px, 12px, -30px);
+  }
+  10%,
+  91% {
+    opacity: 1;
+    transform: translateZ(12px);
+  }
+}
+@keyframes receive {
+  0%,
+  15%,
+  100% {
+    opacity: 0;
+    transform: translate3d(-10px, 12px, -20px);
+  }
+  25%,
+  91% {
+    opacity: 1;
+    transform: translateZ(25px);
+  }
+}
+@keyframes typing {
+  0%,
+  24%,
+  34% {
+    opacity: 1;
+  }
+  29% {
+    opacity: 0.25;
+  }
+  39%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes reveal {
+  0%,
+  39% {
+    clip-path: inset(0 100% 0 0);
+  }
+  62%,
+  100% {
+    clip-path: inset(0);
+  }
+}
+@media (width < 48rem) {
+  .panel {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel * {
+    animation: none;
+  }
+  .typing {
+    visibility: hidden;
+  }
+}
