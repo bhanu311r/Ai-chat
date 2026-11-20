@@ -100,7 +100,7 @@ export function getMessageByErrorCode(errorCode: ErrorCode): string {
       return "Could not load models from OpenRouter. Try again.";
 
     case "bad_request:models":
-      return "Choose a free model that is currently available from OpenRouter.";
+      return "Choose an available OpenRouter chat model.";
 
     case "unauthorized:auth":
       return "You need to sign in before continuing.";

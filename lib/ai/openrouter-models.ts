@@ -11,17 +11,18 @@ const zeroPrice = z
       (typeof price === "number" || price.trim() !== "") && Number(price) === 0
   );
 
-const freeModelSchema = z.object({
-  architecture: z.object({
-    input_modalities: z.array(z.string()),
-    output_modalities: z.array(z.string()),
-  }),
+const openRouterModelSchema = z.object({
+  architecture: z
+    .object({
+      input_modalities: z.array(z.string()).nullish(),
+      output_modalities: z.array(z.string()).nullish(),
+    })
+    .nullish(),
+  endpoints: z.array(z.string()).nullish(),
   id: z.string().min(1),
   name: z.string().min(1),
-  pricing: z
-    .object({ completion: zeroPrice, prompt: zeroPrice })
-    .catchall(zeroPrice.nullable()),
-  supported_parameters: z.array(z.string()).optional().default([]),
+  pricing: z.record(z.string(), z.unknown()).nullish(),
+  supported_parameters: z.array(z.string()).nullish(),
 });
 
 const catalogSchema = z.object({ data: z.array(z.unknown()) });
@@ -32,11 +33,14 @@ export async function getModelCatalog(): Promise<ModelCatalog> {
     throw new ChatbotError("offline:provider");
   }
 
-  const response = await fetch("https://openrouter.ai/api/v1/models/user", {
-    headers: { Authorization: `Bearer ${apiKey}` },
-    next: { revalidate: 300 },
-    signal: AbortSignal.timeout(8000),
-  }).catch(() => null);
+  const response = await fetch(
+    "https://openrouter.ai/api/v1/models/user?output_modalities=all",
+    {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      next: { revalidate: 300 },
+      signal: AbortSignal.timeout(8000),
+    }
+  ).catch(() => null);
 
   if (response?.status === 401 || response?.status === 403) {
     throw new ChatbotError("forbidden:provider");
@@ -54,22 +58,29 @@ export async function getModelCatalog(): Promise<ModelCatalog> {
 
   const catalog: ModelCatalog = { capabilities: {}, models: [] };
   for (const entry of payload.data.data) {
-    const parsed = freeModelSchema.safeParse(entry);
+    const parsed = openRouterModelSchema.safeParse(entry);
     if (!parsed.success) {
       continue;
     }
-    const model = parsed.data;
-    if (
-      !model.architecture.input_modalities.includes("text") ||
-      !model.architecture.output_modalities.includes("text")
-    ) {
-      continue;
-    }
-    catalog.models.push({ id: model.id, name: model.name });
-    catalog.capabilities[model.id] = {
-      reasoning: model.supported_parameters.includes("reasoning"),
-      tools: model.supported_parameters.includes("tools"),
-      vision: model.architecture.input_modalities.includes("image"),
+
+    const { architecture, endpoints, id, name, pricing, supported_parameters } =
+      parsed.data;
+    const supportsChat =
+      Boolean(architecture?.input_modalities?.includes("text")) &&
+      Boolean(architecture?.output_modalities?.includes("text")) &&
+      (!endpoints?.length || endpoints.includes("/api/v1/chat/completions"));
+    const isFree =
+      zeroPrice.safeParse(pricing?.prompt).success &&
+      zeroPrice.safeParse(pricing?.completion).success &&
+      Object.values(pricing ?? {}).every(
+        (price) => price === null || zeroPrice.safeParse(price).success
+      );
+
+    catalog.models.push({ id, isFree, name, supportsChat });
+    catalog.capabilities[id] = {
+      reasoning: supported_parameters?.includes("reasoning") ?? false,
+      tools: supported_parameters?.includes("tools") ?? false,
+      vision: architecture?.input_modalities?.includes("image") ?? false,
     };
   }
 

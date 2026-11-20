@@ -731,11 +731,12 @@ function ModelSelectorOption({
         model.id === selectedModelId &&
           "border-b border-dashed border-foreground/50"
       )}
+      disabled={!model.supportsChat}
       keywords={[model.name]}
       onSelect={handleSelect}
       value={model.id}
     >
-      <ModelSelectorLogo provider={logoProvider} />
+      <ModelSelectorLogo loading="lazy" provider={logoProvider} />
       <ModelSelectorName>{model.name}</ModelSelectorName>
       <div className="ml-auto flex items-center gap-2 text-foreground/70">
         {capabilities?.[model.id]?.tools
@@ -777,9 +778,25 @@ function PureModelSelectorCompact({
     mutate,
   } = useModelCatalog();
 
+  const models = modelsData?.models ?? [];
+  const freeModels = models.filter(
+    (model) => model.supportsChat && model.isFree
+  );
+  const modelGroups = [
+    { name: "Free models", options: freeModels },
+    {
+      name: "Paid models",
+      options: models.filter((model) => model.supportsChat && !model.isFree),
+    },
+    {
+      name: "Other modalities",
+      options: models.filter((model) => !model.supportsChat),
+    },
+  ];
   const selectedModel =
-    modelsData?.models.find((model) => model.id === selectedModelId) ??
-    modelsData?.models[0];
+    models.find(
+      (model) => model.supportsChat && model.id === selectedModelId
+    ) ?? freeModels[0];
   const provider = selectedModel?.id.split("/")[0];
   const retryCatalog = useCallback(() => mutate(), [mutate]);
 
@@ -806,6 +823,9 @@ function PureModelSelectorCompact({
           <ModelSelectorName>
             {selectedModel?.name ?? "Select model"}
           </ModelSelectorName>
+          {selectedModel && !selectedModel.isFree ? (
+            <span className="text-[10px]">Paid</span>
+          ) : null}
         </Button>
       </ModelSelectorTrigger>
       <ModelSelectorContent commandDefaultValue={selectedModel?.id}>
@@ -832,26 +852,35 @@ function PureModelSelectorCompact({
             Loading OpenRouter models…
           </p>
         ) : null}
+        {models.length > 0 && (
+          <p className="px-3 py-2 text-muted-foreground text-xs">
+            {models.length} OpenRouter models
+          </p>
+        )}
         <ModelSelectorList aria-busy={isLoading}>
-          {modelsData?.models.length ? (
+          {models.length > 0 ? (
             <>
               <ModelSelectorEmpty>No matching models.</ModelSelectorEmpty>
-              <ModelSelectorGroup heading="Free models">
-                {modelsData.models.map((model) => (
-                  <ModelSelectorOption
-                    capabilities={modelsData.capabilities}
-                    key={model.id}
-                    model={model}
-                    onModelChange={onModelChange}
-                    selectedModelId={selectedModel?.id ?? ""}
-                    setOpen={setOpen}
-                  />
-                ))}
-              </ModelSelectorGroup>
+              {modelGroups.map(({ name, options }) =>
+                options.length ? (
+                  <ModelSelectorGroup heading={name} key={name}>
+                    {options.map((model) => (
+                      <ModelSelectorOption
+                        capabilities={modelsData?.capabilities}
+                        key={model.id}
+                        model={model}
+                        onModelChange={onModelChange}
+                        selectedModelId={selectedModel?.id ?? ""}
+                        setOpen={setOpen}
+                      />
+                    ))}
+                  </ModelSelectorGroup>
+                ) : null
+              )}
             </>
           ) : modelsData && !error ? (
             <ModelSelectorEmpty>
-              No free OpenRouter models are available.
+              No OpenRouter models are available.
             </ModelSelectorEmpty>
           ) : null}
         </ModelSelectorList>

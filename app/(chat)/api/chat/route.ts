@@ -57,7 +57,10 @@ function getProviderErrorMessage(error: unknown) {
   const providerError = RetryError.isInstance(error) ? error.lastError : error;
   if (APICallError.isInstance(providerError)) {
     if (providerError.statusCode === 429) {
-      return "OpenRouter's free model is rate-limited. Try again later.";
+      return "OpenRouter rate-limited this model. Try again later.";
+    }
+    if (providerError.statusCode === 402) {
+      return "OpenRouter credits are required for this model.";
     }
     if (providerError.statusCode === 401 || providerError.statusCode === 403) {
       return "OpenRouter rejected the request. The site owner should check the API key and model access.";
@@ -121,9 +124,11 @@ export async function POST(request: Request) {
     }
 
     const catalog = isTestEnvironment ? undefined : await getModelCatalog();
-    const modelConfig = selectedChatModel
-      ? catalog?.models.find((model) => model.id === selectedChatModel)
-      : catalog?.models[0];
+    const modelConfig = catalog?.models.find(
+      (model) =>
+        model.supportsChat &&
+        (selectedChatModel ? model.id === selectedChatModel : model.isFree)
+    );
     if (catalog && !modelConfig) {
       return new ChatbotError("bad_request:models").toResponse();
     }

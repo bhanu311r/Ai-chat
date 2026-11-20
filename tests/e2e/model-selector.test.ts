@@ -1,15 +1,36 @@
 import { expect, test } from "@playwright/test";
 
 const fixtureModel = {
-  id: "inclusionai/ling-3.2-flash:free",
+  id: "fixture/flash:free",
+  isFree: true,
   name: "Ling 3.2 Flash (free)",
+  supportsChat: true,
 };
 
-const routerModel = { id: "openrouter/free", name: "OpenRouter Free" };
+const routerModel = {
+  id: "fixture/router",
+  isFree: true,
+  name: "OpenRouter Free",
+  supportsChat: true,
+};
+
+const paidModel = {
+  id: "fixture/paid",
+  isFree: false,
+  name: "Paid Chat Model",
+  supportsChat: true,
+};
+
+const embeddingModel = {
+  id: "fixture/embedding",
+  isFree: false,
+  name: "Embedding Model",
+  supportsChat: false,
+};
 
 const catalog = {
   capabilities: {},
-  models: [routerModel, fixtureModel],
+  models: [paidModel, embeddingModel, routerModel, fixtureModel],
 };
 
 test.describe("Model Selector", () => {
@@ -67,16 +88,25 @@ test.describe("Model Selector", () => {
     await expect(
       availableModels.getByRole("option", { name: routerModel.name })
     ).toBeVisible();
+    await expect(modelButton).toContainText(routerModel.name);
+    await expect(
+      page
+        .getByRole("group", { name: "Paid models" })
+        .getByRole("option", { name: paidModel.name })
+    ).toBeEnabled();
+    await expect(
+      page.getByRole("option", { name: embeddingModel.name })
+    ).toBeDisabled();
   });
 
   test("can select a different model", async ({ page }) => {
     const modelButton = page.getByTestId("model-selector");
     await modelButton.click();
 
-    await page.getByRole("option", { name: fixtureModel.name }).click();
+    await page.getByRole("option", { name: paidModel.name }).click();
 
     await expect(page.getByPlaceholder("Search models...")).not.toBeVisible();
-    await expect(modelButton).toContainText(fixtureModel.name);
+    await expect(modelButton).toContainText(paidModel.name);
   });
 });
 
