@@ -124,11 +124,9 @@ export async function POST(request: Request) {
     }
 
     const catalog = isTestEnvironment ? undefined : await getModelCatalog();
-    const modelConfig = catalog?.models.find(
-      (model) =>
-        model.supportsChat &&
-        (selectedChatModel ? model.id === selectedChatModel : model.isFree)
-    );
+    const modelConfig = selectedChatModel
+      ? catalog?.models.find((model) => model.id === selectedChatModel)
+      : catalog?.models[0];
     if (catalog && !modelConfig) {
       return new ChatbotError("bad_request:models").toResponse();
     }

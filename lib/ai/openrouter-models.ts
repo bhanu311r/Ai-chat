@@ -4,13 +4,6 @@ import { z } from "zod";
 import { ChatbotError } from "@/lib/errors";
 import type { ModelCatalog } from "./models";
 
-const zeroPrice = z
-  .union([z.number(), z.string()])
-  .refine(
-    (price) =>
-      (typeof price === "number" || price.trim() !== "") && Number(price) === 0
-  );
-
 const openRouterModelSchema = z.object({
   architecture: z
     .object({
@@ -21,7 +14,6 @@ const openRouterModelSchema = z.object({
   endpoints: z.array(z.string()).nullish(),
   id: z.string().min(1),
   name: z.string().min(1),
-  pricing: z.record(z.string(), z.unknown()).nullish(),
   supported_parameters: z.array(z.string()).nullish(),
 });
 
@@ -63,20 +55,17 @@ export async function getModelCatalog(): Promise<ModelCatalog> {
       continue;
     }
 
-    const { architecture, endpoints, id, name, pricing, supported_parameters } =
+    const { architecture, endpoints, id, name, supported_parameters } =
       parsed.data;
     const supportsChat =
       Boolean(architecture?.input_modalities?.includes("text")) &&
       Boolean(architecture?.output_modalities?.includes("text")) &&
       (!endpoints?.length || endpoints.includes("/api/v1/chat/completions"));
-    const isFree =
-      zeroPrice.safeParse(pricing?.prompt).success &&
-      zeroPrice.safeParse(pricing?.completion).success &&
-      Object.values(pricing ?? {}).every(
-        (price) => price === null || zeroPrice.safeParse(price).success
-      );
+    if (!supportsChat) {
+      continue;
+    }
 
-    catalog.models.push({ id, isFree, name, supportsChat });
+    catalog.models.push({ id, name });
     catalog.capabilities[id] = {
       reasoning: supported_parameters?.includes("reasoning") ?? false,
       tools: supported_parameters?.includes("tools") ?? false,

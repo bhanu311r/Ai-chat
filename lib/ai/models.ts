@@ -2,9 +2,7 @@ import { z } from "zod";
 
 const chatModelSchema = z.object({
   id: z.string(),
-  isFree: z.boolean(),
   name: z.string(),
-  supportsChat: z.boolean(),
 });
 
 const modelCapabilitiesSchema = z.object({

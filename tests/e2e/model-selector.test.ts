@@ -2,35 +2,22 @@ import { expect, test } from "@playwright/test";
 
 const fixtureModel = {
   id: "fixture/flash:free",
-  isFree: true,
   name: "Ling 3.2 Flash (free)",
-  supportsChat: true,
 };
 
 const routerModel = {
   id: "fixture/router",
-  isFree: true,
   name: "OpenRouter Free",
-  supportsChat: true,
 };
 
 const paidModel = {
   id: "fixture/paid",
-  isFree: false,
   name: "Paid Chat Model",
-  supportsChat: true,
-};
-
-const embeddingModel = {
-  id: "fixture/embedding",
-  isFree: false,
-  name: "Embedding Model",
-  supportsChat: false,
 };
 
 const catalog = {
   capabilities: {},
-  models: [paidModel, embeddingModel, routerModel, fixtureModel],
+  models: [paidModel, routerModel, fixtureModel],
 };
 
 test.describe("Model Selector", () => {
@@ -80,33 +67,21 @@ test.describe("Model Selector", () => {
     const modelButton = page.getByTestId("model-selector");
     await modelButton.click();
 
-    const availableModels = page.getByRole("group", { name: "Free models" });
-    await expect(availableModels).toBeVisible();
-    await expect(
-      availableModels.getByRole("option", { name: fixtureModel.name })
-    ).toBeVisible();
-    await expect(
-      availableModels.getByRole("option", { name: routerModel.name })
-    ).toBeVisible();
-    await expect(modelButton).toContainText(routerModel.name);
-    await expect(
-      page
-        .getByRole("group", { name: "Paid models" })
-        .getByRole("option", { name: paidModel.name })
-    ).toBeEnabled();
-    await expect(
-      page.getByRole("option", { name: embeddingModel.name })
-    ).toBeDisabled();
+    await expect(page.getByRole("option")).toHaveCount(catalog.models.length);
+    await expect(page.getByRole("option")).toHaveText(
+      catalog.models.map((model) => model.name)
+    );
+    await expect(modelButton).toHaveText(paidModel.name);
   });
 
   test("can select a different model", async ({ page }) => {
     const modelButton = page.getByTestId("model-selector");
     await modelButton.click();
 
-    await page.getByRole("option", { name: paidModel.name }).click();
+    await page.getByRole("option", { name: routerModel.name }).click();
 
     await expect(page.getByPlaceholder("Search models...")).not.toBeVisible();
-    await expect(modelButton).toContainText(paidModel.name);
+    await expect(modelButton).toHaveText(routerModel.name);
   });
 });
 

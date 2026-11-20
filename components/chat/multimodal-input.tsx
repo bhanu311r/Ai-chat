@@ -731,7 +731,6 @@ function ModelSelectorOption({
         model.id === selectedModelId &&
           "border-b border-dashed border-foreground/50"
       )}
-      disabled={!model.supportsChat}
       keywords={[model.name]}
       onSelect={handleSelect}
       value={model.id}
@@ -779,24 +778,8 @@ function PureModelSelectorCompact({
   } = useModelCatalog();
 
   const models = modelsData?.models ?? [];
-  const freeModels = models.filter(
-    (model) => model.supportsChat && model.isFree
-  );
-  const modelGroups = [
-    { name: "Free models", options: freeModels },
-    {
-      name: "Paid models",
-      options: models.filter((model) => model.supportsChat && !model.isFree),
-    },
-    {
-      name: "Other modalities",
-      options: models.filter((model) => !model.supportsChat),
-    },
-  ];
   const selectedModel =
-    models.find(
-      (model) => model.supportsChat && model.id === selectedModelId
-    ) ?? freeModels[0];
+    models.find((model) => model.id === selectedModelId) ?? models[0];
   const provider = selectedModel?.id.split("/")[0];
   const retryCatalog = useCallback(() => mutate(), [mutate]);
 
@@ -823,9 +806,6 @@ function PureModelSelectorCompact({
           <ModelSelectorName>
             {selectedModel?.name ?? "Select model"}
           </ModelSelectorName>
-          {selectedModel && !selectedModel.isFree ? (
-            <span className="text-[10px]">Paid</span>
-          ) : null}
         </Button>
       </ModelSelectorTrigger>
       <ModelSelectorContent commandDefaultValue={selectedModel?.id}>
@@ -861,22 +841,18 @@ function PureModelSelectorCompact({
           {models.length > 0 ? (
             <>
               <ModelSelectorEmpty>No matching models.</ModelSelectorEmpty>
-              {modelGroups.map(({ name, options }) =>
-                options.length ? (
-                  <ModelSelectorGroup heading={name} key={name}>
-                    {options.map((model) => (
-                      <ModelSelectorOption
-                        capabilities={modelsData?.capabilities}
-                        key={model.id}
-                        model={model}
-                        onModelChange={onModelChange}
-                        selectedModelId={selectedModel?.id ?? ""}
-                        setOpen={setOpen}
-                      />
-                    ))}
-                  </ModelSelectorGroup>
-                ) : null
-              )}
+              <ModelSelectorGroup>
+                {models.map((model) => (
+                  <ModelSelectorOption
+                    capabilities={modelsData?.capabilities}
+                    key={model.id}
+                    model={model}
+                    onModelChange={onModelChange}
+                    selectedModelId={selectedModel?.id ?? ""}
+                    setOpen={setOpen}
+                  />
+                ))}
+              </ModelSelectorGroup>
             </>
           ) : modelsData && !error ? (
             <ModelSelectorEmpty>
