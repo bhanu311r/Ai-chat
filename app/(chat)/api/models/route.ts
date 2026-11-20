@@ -1,20 +1,8 @@
-import { getAllGatewayModels, getCapabilities, isDemo } from "@/lib/ai/models";
+import { getModelCatalog } from "@/lib/ai/openrouter-models";
 
 export async function GET() {
-  const headers = {
-    "Cache-Control": "public, max-age=86400, s-maxage=86400",
-  };
-
-  const curatedCapabilities = await getCapabilities();
-
-  if (isDemo) {
-    const models = await getAllGatewayModels();
-    const capabilities = Object.fromEntries(
-      models.map((m) => [m.id, curatedCapabilities[m.id] ?? m.capabilities])
-    );
-
-    return Response.json({ capabilities, models }, { headers });
-  }
-
-  return Response.json(curatedCapabilities, { headers });
+  const catalog = await getModelCatalog();
+  return Response.json(catalog, {
+    headers: { "Cache-Control": "public, max-age=300, s-maxage=300" },
+  });
 }

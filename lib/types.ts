@@ -28,7 +28,7 @@ export type ChatTools = {
 };
 
 export type WaitingStatusData = {
-  phase: "waiting" | "still-waiting" | "health" | "thinking";
+  phase: "waiting" | "still-waiting" | "thinking";
   message: string;
   modelId: string;
   modelName: string;

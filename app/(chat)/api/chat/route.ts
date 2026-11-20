@@ -1,10 +1,12 @@
 import { geolocation, ipAddress } from "@vercel/functions";
 import {
+  APICallError,
   convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
   generateId,
   isStepCount,
+  RetryError,
   streamText,
   toUIMessageStream,
 } from "ai";
@@ -14,13 +16,7 @@ import { createResumableStreamContext } from "resumable-stream";
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { generateTitleFromUserMessage } from "@/lib/ai/generate-title";
-import {
-  allowedModelIds,
-  chatModels,
-  DEFAULT_CHAT_MODEL,
-  getCapabilities,
-  getModelAvailability,
-} from "@/lib/ai/models";
+import { getModelCatalog } from "@/lib/ai/openrouter-models";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
@@ -28,7 +24,7 @@ import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
-import { isProductionEnvironment } from "@/lib/constants";
+import { isProductionEnvironment, isTestEnvironment } from "@/lib/constants";
 import {
   createStreamId,
   deleteChatById,
@@ -49,12 +45,25 @@ import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
 export const maxDuration = 60;
 
-const HEALTH_CHECK_DELAY_MS = 9000;
+const WAITING_STATUS_DELAY_MS = 9000;
 
 function isModelStreamActivity(chunk: { type: string }) {
   return !["start", "start-step", "finish-step", "finish", "raw"].includes(
     chunk.type
   );
+}
+
+function getProviderErrorMessage(error: unknown) {
+  const providerError = RetryError.isInstance(error) ? error.lastError : error;
+  if (APICallError.isInstance(providerError)) {
+    if (providerError.statusCode === 429) {
+      return "OpenRouter's free model is rate-limited. Try again later.";
+    }
+    if (providerError.statusCode === 401 || providerError.statusCode === 403) {
+      return "OpenRouter rejected the request. The site owner should check the API key and model access.";
+    }
+  }
+  return "OpenRouter could not complete the reply. Try again or choose a different model.";
 }
 
 function getStreamContext() {
@@ -94,9 +103,9 @@ export async function POST(request: Request) {
       return new ChatbotError("unauthorized:chat").toResponse();
     }
 
-    const chatModel = allowedModelIds.has(selectedChatModel)
-      ? selectedChatModel
-      : DEFAULT_CHAT_MODEL;
+    if (!isTestEnvironment && !process.env.OPENROUTER_API_KEY?.trim()) {
+      return new ChatbotError("offline:provider").toResponse();
+    }
 
     await checkIpRateLimit(ipAddress(request));
 
@@ -111,11 +120,18 @@ export async function POST(request: Request) {
       return new ChatbotError("rate_limit:chat").toResponse();
     }
 
+    const catalog = await getModelCatalog();
+    const modelConfig =
+      catalog.models.find((model) => model.id === selectedChatModel) ??
+      catalog.models[0];
+    const chatModel = modelConfig.id;
+    const capabilities = catalog.capabilities[chatModel];
+
     const isToolApprovalFlow = Boolean(messages);
 
     const chat = await getChatById({ id });
     let messagesFromDb: DBMessage[] = [];
-    let titlePromise: Promise<string> | null = null;
+    let titlePromise: Promise<string | null> | null = null;
 
     if (chat) {
       if (chat.userId !== session.user.id) {
@@ -129,7 +145,9 @@ export async function POST(request: Request) {
         userId: session.user.id,
         visibility: selectedVisibilityType,
       });
-      titlePromise = generateTitleFromUserMessage({ message });
+      titlePromise = generateTitleFromUserMessage({ message }).catch(
+        () => null
+      );
     }
 
     let uiMessages: ChatMessage[];
@@ -194,9 +212,6 @@ export async function POST(request: Request) {
       });
     }
 
-    const modelConfig = chatModels.find((m) => m.id === chatModel);
-    const modelCapabilities = await getCapabilities();
-    const capabilities = modelCapabilities[chatModel];
     const isReasoningModel = capabilities?.reasoning === true;
     const supportsTools = capabilities?.tools === true;
 
@@ -204,13 +219,13 @@ export async function POST(request: Request) {
 
     const stream = createUIMessageStream({
       execute: async ({ writer: dataStream }) => {
-        const modelName = modelConfig?.name ?? chatModel;
+        const modelName = modelConfig.name;
         let hasModelActivity = false;
-        let healthCheckTimer: ReturnType<typeof setTimeout> | undefined;
+        let waitingStatusTimer: ReturnType<typeof setTimeout> | undefined;
 
-        const clearHealthCheckTimer = () => {
-          if (healthCheckTimer) {
-            clearTimeout(healthCheckTimer);
+        const clearWaitingStatusTimer = () => {
+          if (waitingStatusTimer) {
+            clearTimeout(waitingStatusTimer);
           }
         };
 
@@ -235,48 +250,34 @@ export async function POST(request: Request) {
 
         writeWaitingStatus("waiting", "Waiting...");
 
-        healthCheckTimer = setTimeout(() => {
-          getModelAvailability(chatModel)
-            .then((availability) => {
-              if (availability === "impacted") {
-                writeWaitingStatus(
-                  "health",
-                  `${modelName} may be slow or unavailable right now...`
-                );
-              } else {
-                writeWaitingStatus("still-waiting", "Still waiting...");
-              }
-            })
-            .catch(() => {
-              writeWaitingStatus("still-waiting", "Still waiting...");
-            });
-        }, HEALTH_CHECK_DELAY_MS);
+        waitingStatusTimer = setTimeout(() => {
+          writeWaitingStatus("still-waiting", "Still waiting...");
+        }, WAITING_STATUS_DELAY_MS);
 
         const markModelActive = () => {
           if (hasModelActivity) {
             return;
           }
           hasModelActivity = true;
-          clearHealthCheckTimer();
+          clearWaitingStatusTimer();
           writeWaitingStatus("thinking", "Thinking...");
         };
 
         const stopWaitingStatus = () => {
           hasModelActivity = true;
-          clearHealthCheckTimer();
+          clearWaitingStatusTimer();
         };
 
         const result = streamText({
-          activeTools:
-            isReasoningModel && !supportsTools
-              ? []
-              : [
-                  "getWeather",
-                  "createDocument",
-                  "editDocument",
-                  "updateDocument",
-                  "requestSuggestions",
-                ],
+          activeTools: supportsTools
+            ? [
+                "getWeather",
+                "createDocument",
+                "editDocument",
+                "updateDocument",
+                "requestSuggestions",
+              ]
+            : [],
           instructions: systemPrompt({ requestHints, supportsTools }),
           messages: modelMessages,
           model: getLanguageModel(chatModel),
@@ -293,14 +294,6 @@ export async function POST(request: Request) {
           },
           onError() {
             stopWaitingStatus();
-          },
-          providerOptions: {
-            ...(modelConfig?.gatewayOrder && {
-              gateway: { order: modelConfig.gatewayOrder },
-            }),
-            ...(modelConfig?.reasoningEffort && {
-              openai: { reasoningEffort: modelConfig.reasoningEffort },
-            }),
           },
           stopWhen: isStepCount(5),
           telemetry: {
@@ -330,6 +323,7 @@ export async function POST(request: Request) {
 
         dataStream.merge(
           toUIMessageStream({
+            onError: getProviderErrorMessage,
             sendReasoning: isReasoningModel,
             stream: result.stream,
           })
@@ -338,8 +332,10 @@ export async function POST(request: Request) {
         if (titlePromise) {
           try {
             const title = await titlePromise;
-            dataStream.write({ data: title, type: "data-chat-title" });
-            updateChatTitleById({ chatId: id, title });
+            if (title) {
+              dataStream.write({ data: title, type: "data-chat-title" });
+              await updateChatTitleById({ chatId: id, title });
+            }
           } catch {
             /* non-fatal */
           }
@@ -388,17 +384,7 @@ export async function POST(request: Request) {
           });
         }
       },
-      onError: (error) => {
-        if (
-          error instanceof Error &&
-          error.message?.includes(
-            "AI Gateway requires a valid credit card on file to service requests"
-          )
-        ) {
-          return "AI Gateway requires a valid credit card on file to service requests. Please visit https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai%3Fmodal%3Dadd-credit-card to add a card and unlock your free credits.";
-        }
-        return "Oops, an error occurred!";
-      },
+      onError: getProviderErrorMessage,
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
     });
 
@@ -428,15 +414,6 @@ export async function POST(request: Request) {
 
     if (error instanceof ChatbotError) {
       return error.toResponse();
-    }
-
-    if (
-      error instanceof Error &&
-      error.message?.includes(
-        "AI Gateway requires a valid credit card on file to service requests"
-      )
-    ) {
-      return new ChatbotError("bad_request:activate_gateway").toResponse();
     }
 
     console.error("Unhandled error in chat API:", error, { vercelId });

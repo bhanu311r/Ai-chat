@@ -3,13 +3,7 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
 import equal from "fast-deep-equal";
-import {
-  ArrowUpIcon,
-  BrainIcon,
-  EyeIcon,
-  LockIcon,
-  WrenchIcon,
-} from "lucide-react";
+import { ArrowUpIcon, BrainIcon, EyeIcon, WrenchIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
@@ -39,9 +33,10 @@ import {
 } from "@/components/ai-elements/model-selector";
 import {
   type ChatModel,
-  chatModels,
   DEFAULT_CHAT_MODEL,
+  defaultChatModel,
   type ModelCapabilities,
+  type ModelCatalog,
 } from "@/lib/ai/models";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -644,15 +639,16 @@ function PureAttachmentsButton({
   status: UseChatHelpers<ChatMessage>["status"];
   selectedModelId: string;
 }) {
-  const { data: modelsResponse } = useSWR(
+  const { data: modelsResponse } = useSWR<ModelCatalog>(
     `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
     (url: string) => fetch(url).then((r) => r.json()),
     { dedupingInterval: 3_600_000, revalidateOnFocus: false }
   );
 
-  const caps: Record<string, ModelCapabilities> | undefined =
-    modelsResponse?.capabilities ?? modelsResponse;
-  const hasVision = caps?.[selectedModelId]?.vision ?? false;
+  const capabilities = modelsResponse?.capabilities;
+  const hasVision =
+    (capabilities?.[selectedModelId] ?? capabilities?.[DEFAULT_CHAT_MODEL])
+      ?.vision ?? false;
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       event.preventDefault();
@@ -683,40 +679,29 @@ const AttachmentsButton = memo(PureAttachmentsButton);
 
 function ModelSelectorOption({
   capabilities,
-  curated,
   model,
   onModelChange,
   selectedModelId,
   setOpen,
 }: {
   capabilities: Record<string, ModelCapabilities> | undefined;
-  curated: boolean;
   model: ChatModel;
   onModelChange?: (modelId: string) => void;
   selectedModelId: string;
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) {
   const [logoProvider] = model.id.split("/");
-  const maybeWithTooltip = (icon: ReactNode, label: string) => {
-    if (!curated) {
-      return icon;
-    }
-
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="inline-flex">{icon}</span>
-        </TooltipTrigger>
-        <TooltipContent side="top" sideOffset={8}>
-          {label}
-        </TooltipContent>
-      </Tooltip>
-    );
-  };
+  const maybeWithTooltip = (icon: ReactNode, label: string) => (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="inline-flex">{icon}</span>
+      </TooltipTrigger>
+      <TooltipContent side="top" sideOffset={8}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
   const handleSelect = useCallback(() => {
-    if (!curated) {
-      return;
-    }
     onModelChange?.(model.id);
     setCookie("chat-model", model.id);
     setOpen(false);
@@ -725,19 +710,16 @@ function ModelSelectorOption({
         .querySelector<HTMLTextAreaElement>("[data-testid='multimodal-input']")
         ?.focus();
     }, 50);
-  }, [curated, model.id, onModelChange, setOpen]);
+  }, [model.id, onModelChange, setOpen]);
 
-  const option = (
+  return (
     <ModelSelectorItem
-      aria-disabled={!curated}
       className={cn(
-        "flex w-full transition-colors",
+        "flex w-full transition-colors data-[selected=true]:bg-muted data-[selected=true]:text-foreground",
         model.id === selectedModelId &&
-          "border-b border-dashed border-foreground/50",
-        curated
-          ? "data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
-          : "cursor-not-allowed opacity-40 data-[selected=true]:bg-transparent data-[selected=true]:opacity-60 data-[selected=true]:ring-1 data-[selected=true]:ring-muted-foreground/30 data-[selected=true]:ring-inset"
+          "border-b border-dashed border-foreground/50"
       )}
+      keywords={[model.name]}
       onSelect={handleSelect}
       value={model.id}
     >
@@ -762,24 +744,8 @@ function ModelSelectorOption({
               "Supports reasoning"
             )
           : null}
-        {!curated && <LockIcon className="size-3 text-muted-foreground/50" />}
       </div>
     </ModelSelectorItem>
-  );
-
-  if (curated) {
-    return option;
-  }
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div className="w-full cursor-not-allowed">{option}</div>
-      </TooltipTrigger>
-      <TooltipContent side="right" sideOffset={8}>
-        This model is not available in the demo.
-      </TooltipContent>
-    </Tooltip>
   );
 }
 
@@ -791,21 +757,16 @@ function PureModelSelectorCompact({
   onModelChange?: (modelId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const { data: modelsData } = useSWR(
+  const { data: modelsData } = useSWR<ModelCatalog>(
     `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
     (url: string) => fetch(url).then((r) => r.json()),
     { dedupingInterval: 3_600_000, revalidateOnFocus: false }
   );
 
-  const capabilities: Record<string, ModelCapabilities> | undefined =
-    modelsData?.capabilities ?? modelsData;
-  const dynamicModels: ChatModel[] | undefined = modelsData?.models;
-  const activeModels = dynamicModels ?? chatModels;
-
+  const activeModels = modelsData?.models ?? [defaultChatModel];
   const selectedModel =
-    activeModels.find((m: ChatModel) => m.id === selectedModelId) ??
-    activeModels.find((m: ChatModel) => m.id === DEFAULT_CHAT_MODEL) ??
-    activeModels[0];
+    activeModels.find((model) => model.id === selectedModelId) ??
+    defaultChatModel;
   const [provider] = selectedModel.id.split("/");
 
   return (
@@ -823,87 +784,18 @@ function PureModelSelectorCompact({
       <ModelSelectorContent commandDefaultValue={selectedModel.id}>
         <ModelSelectorInput placeholder="Search models..." />
         <ModelSelectorList>
-          {(() => {
-            const curatedIds = new Set(chatModels.map((m) => m.id));
-            const allModels = dynamicModels
-              ? [
-                  ...chatModels,
-                  ...dynamicModels.filter((m) => !curatedIds.has(m.id)),
-                ]
-              : chatModels;
-
-            const grouped: Record<
-              string,
-              { model: ChatModel; curated: boolean }[]
-            > = {};
-            for (const model of allModels) {
-              const key = curatedIds.has(model.id)
-                ? "_available"
-                : model.provider;
-              if (!grouped[key]) {
-                grouped[key] = [];
-              }
-              grouped[key].push({ curated: curatedIds.has(model.id), model });
-            }
-
-            const sortedKeys = Object.keys(grouped).sort((a, b) => {
-              if (a === "_available") {
-                return -1;
-              }
-              if (b === "_available") {
-                return 1;
-              }
-              return a.localeCompare(b);
-            });
-
-            const providerNames: Record<string, string> = {
-              alibaba: "Alibaba",
-              anthropic: "Anthropic",
-              "arcee-ai": "Arcee AI",
-              bytedance: "ByteDance",
-              cohere: "Cohere",
-              deepseek: "DeepSeek",
-              google: "Google",
-              inception: "Inception",
-              kwaipilot: "Kwaipilot",
-              meituan: "Meituan",
-              meta: "Meta",
-              minimax: "MiniMax",
-              mistral: "Mistral",
-              moonshotai: "Moonshot",
-              morph: "Morph",
-              nvidia: "Nvidia",
-              openai: "OpenAI",
-              perplexity: "Perplexity",
-              "prime-intellect": "Prime Intellect",
-              xai: "xAI",
-              xiaomi: "Xiaomi",
-              zai: "Zai",
-            };
-
-            return sortedKeys.map((key) => (
-              <ModelSelectorGroup
-                heading={
-                  key === "_available"
-                    ? "Available"
-                    : (providerNames[key] ?? key)
-                }
-                key={key}
-              >
-                {grouped[key].map(({ model, curated }) => (
-                  <ModelSelectorOption
-                    capabilities={capabilities}
-                    curated={curated}
-                    key={model.id}
-                    model={model}
-                    onModelChange={onModelChange}
-                    selectedModelId={selectedModel.id}
-                    setOpen={setOpen}
-                  />
-                ))}
-              </ModelSelectorGroup>
-            ));
-          })()}
+          <ModelSelectorGroup heading="Free models">
+            {activeModels.map((model) => (
+              <ModelSelectorOption
+                capabilities={modelsData?.capabilities}
+                key={model.id}
+                model={model}
+                onModelChange={onModelChange}
+                selectedModelId={selectedModel.id}
+                setOpen={setOpen}
+              />
+            ))}
+          </ModelSelectorGroup>
         </ModelSelectorList>
       </ModelSelectorContent>
     </ModelSelector>

@@ -1,7 +1,21 @@
 import { expect, test } from "@playwright/test";
+import { defaultChatModel } from "@/lib/ai/models";
+
+const fixtureModel = {
+  id: "inclusionai/ling-3.2-flash:free",
+  name: "Ling 3.2 Flash (free)",
+};
 
 test.describe("Model Selector", () => {
   test.beforeEach(async ({ page }) => {
+    await page.route("**/api/models", async (route) => {
+      await route.fulfill({
+        json: {
+          capabilities: {},
+          models: [defaultChatModel, fixtureModel],
+        },
+      });
+    });
     await page.goto("/");
   });
 
@@ -22,10 +36,10 @@ test.describe("Model Selector", () => {
     await modelButton.click();
 
     const searchInput = page.getByPlaceholder("Search models...");
-    await searchInput.fill("DeepSeek");
+    await searchInput.fill("Ling");
 
     await expect(
-      page.getByRole("option", { name: /DeepSeek V3\.2/ })
+      page.getByRole("option", { name: fixtureModel.name })
     ).toBeVisible();
   });
 
@@ -44,13 +58,13 @@ test.describe("Model Selector", () => {
     const modelButton = page.getByTestId("model-selector");
     await modelButton.click();
 
-    const availableModels = page.getByRole("group", { name: "Available" });
+    const availableModels = page.getByRole("group", { name: "Free models" });
     await expect(availableModels).toBeVisible();
     await expect(
-      availableModels.getByRole("option", { name: /DeepSeek V3\.2/ })
+      availableModels.getByRole("option", { name: fixtureModel.name })
     ).toBeVisible();
     await expect(
-      availableModels.getByRole("option", { name: /Kimi K2\.5/ })
+      availableModels.getByRole("option", { name: defaultChatModel.name })
     ).toBeVisible();
   });
 
@@ -58,9 +72,9 @@ test.describe("Model Selector", () => {
     const modelButton = page.getByTestId("model-selector");
     await modelButton.click();
 
-    await page.getByRole("option", { name: /DeepSeek V3\.2/ }).click();
+    await page.getByRole("option", { name: fixtureModel.name }).click();
 
     await expect(page.getByPlaceholder("Search models...")).not.toBeVisible();
-    await expect(modelButton).toContainText("DeepSeek V3.2");
+    await expect(modelButton).toContainText(fixtureModel.name);
   });
 });
