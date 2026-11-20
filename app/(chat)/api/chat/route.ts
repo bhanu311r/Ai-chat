@@ -13,8 +13,8 @@ import {
 import { checkBotId } from "botid/server";
 import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
-import { auth, type UserType } from "@/app/(auth)/auth";
-import { entitlementsByUserType } from "@/lib/ai/entitlements";
+import { auth } from "@/app/(auth)/auth";
+import { maxMessagesPerHour } from "@/lib/ai/entitlements";
 import { generateTitleFromUserMessage } from "@/lib/ai/generate-title";
 import { getModelCatalog } from "@/lib/ai/openrouter-models";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
@@ -112,14 +112,12 @@ export async function POST(request: Request) {
 
     await checkIpRateLimit(ipAddress(request));
 
-    const userType: UserType = session.user.type;
-
     const messageCount = await getMessageCountByUserId({
       differenceInHours: 1,
       id: session.user.id,
     });
 
-    if (messageCount > entitlementsByUserType[userType].maxMessagesPerHour) {
+    if (messageCount > maxMessagesPerHour) {
       return new ChatbotError("rate_limit:chat").toResponse();
     }
 
