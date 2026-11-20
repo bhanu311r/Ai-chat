@@ -9,12 +9,14 @@ const MAX_TITLE_PROMPT_LENGTH = 2000;
 
 export async function generateTitleFromUserMessage({
   message,
+  modelId,
 }: {
   message: UIMessage;
+  modelId: string;
 }) {
   const { text } = await generateText({
     instructions: titlePrompt,
-    model: getTitleModel(),
+    model: getTitleModel(modelId),
     prompt: getTextFromMessage(message).slice(0, MAX_TITLE_PROMPT_LENGTH),
   });
   return text

@@ -1,7 +1,12 @@
 import { openrouter } from "@openrouter/ai-sdk-provider";
 import { customProvider } from "ai";
 import { isTestEnvironment } from "../constants";
-import { DEFAULT_CHAT_MODEL } from "./models";
+
+const freeRouting = {
+  provider: {
+    max_price: { audio: 0, completion: 0, image: 0, prompt: 0, request: 0 },
+  },
+};
 
 export const myProvider = isTestEnvironment
   ? (() => {
@@ -23,12 +28,12 @@ export function getLanguageModel(modelId: string) {
     return myProvider.languageModel("chat-model");
   }
 
-  return openrouter.chat(modelId);
+  return openrouter.chat(modelId, freeRouting);
 }
 
-export function getTitleModel() {
+export function getTitleModel(modelId: string) {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel("title-model");
   }
-  return openrouter.chat(DEFAULT_CHAT_MODEL);
+  return openrouter.chat(modelId, freeRouting);
 }

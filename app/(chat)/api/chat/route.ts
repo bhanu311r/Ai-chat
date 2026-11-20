@@ -120,12 +120,16 @@ export async function POST(request: Request) {
       return new ChatbotError("rate_limit:chat").toResponse();
     }
 
-    const catalog = await getModelCatalog();
-    const modelConfig =
-      catalog.models.find((model) => model.id === selectedChatModel) ??
-      catalog.models[0];
-    const chatModel = modelConfig.id;
-    const capabilities = catalog.capabilities[chatModel];
+    const catalog = isTestEnvironment ? undefined : await getModelCatalog();
+    const modelConfig = selectedChatModel
+      ? catalog?.models.find((model) => model.id === selectedChatModel)
+      : catalog?.models[0];
+    if (catalog && !modelConfig) {
+      return new ChatbotError("bad_request:models").toResponse();
+    }
+
+    const chatModel = modelConfig?.id ?? selectedChatModel;
+    const capabilities = catalog?.capabilities[chatModel];
 
     const isToolApprovalFlow = Boolean(messages);
 
@@ -145,9 +149,10 @@ export async function POST(request: Request) {
         userId: session.user.id,
         visibility: selectedVisibilityType,
       });
-      titlePromise = generateTitleFromUserMessage({ message }).catch(
-        () => null
-      );
+      titlePromise = generateTitleFromUserMessage({
+        message,
+        modelId: chatModel,
+      }).catch(() => null);
     }
 
     let uiMessages: ChatMessage[];
@@ -219,7 +224,7 @@ export async function POST(request: Request) {
 
     const stream = createUIMessageStream({
       execute: async ({ writer: dataStream }) => {
-        const modelName = modelConfig.name;
+        const modelName = modelConfig?.name ?? chatModel;
         let hasModelActivity = false;
         let waitingStatusTimer: ReturnType<typeof setTimeout> | undefined;
 

@@ -23,6 +23,7 @@ import { useLocalStorage, useWindowSize } from "usehooks-ts";
 import {
   ModelSelector,
   ModelSelectorContent,
+  ModelSelectorEmpty,
   ModelSelectorGroup,
   ModelSelectorInput,
   ModelSelectorItem,
@@ -31,15 +32,14 @@ import {
   ModelSelectorName,
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
-import {
-  type ChatModel,
-  DEFAULT_CHAT_MODEL,
-  defaultChatModel,
-  type ModelCapabilities,
-  type ModelCatalog,
+import type {
+  ChatModel,
+  ModelCapabilities,
+  ModelCatalog,
 } from "@/lib/ai/models";
+import { ChatbotError } from "@/lib/errors";
 import type { Attachment, ChatMessage } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, fetcher } from "@/lib/utils";
 import {
   PromptInput,
   PromptInputFooter,
@@ -63,6 +63,14 @@ function setCookie(name: string, value: string) {
   const maxAge = 60 * 60 * 24 * 365;
   // biome-ignore lint/suspicious/noDocumentCookie: needed for client-side cookie setting
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}`;
+}
+
+function useModelCatalog() {
+  return useSWR<ModelCatalog>(
+    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
+    fetcher,
+    { dedupingInterval: 60_000, shouldRetryOnError: false }
+  );
 }
 
 function PureMultimodalInput({
@@ -639,16 +647,10 @@ function PureAttachmentsButton({
   status: UseChatHelpers<ChatMessage>["status"];
   selectedModelId: string;
 }) {
-  const { data: modelsResponse } = useSWR<ModelCatalog>(
-    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
-    (url: string) => fetch(url).then((r) => r.json()),
-    { dedupingInterval: 3_600_000, revalidateOnFocus: false }
-  );
+  const { data: modelsResponse } = useModelCatalog();
 
-  const capabilities = modelsResponse?.capabilities;
   const hasVision =
-    (capabilities?.[selectedModelId] ?? capabilities?.[DEFAULT_CHAT_MODEL])
-      ?.vision ?? false;
+    modelsResponse?.capabilities[selectedModelId]?.vision ?? false;
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       event.preventDefault();
@@ -757,17 +759,30 @@ function PureModelSelectorCompact({
   onModelChange?: (modelId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const { data: modelsData } = useSWR<ModelCatalog>(
-    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
-    (url: string) => fetch(url).then((r) => r.json()),
-    { dedupingInterval: 3_600_000, revalidateOnFocus: false }
-  );
+  const {
+    data: modelsData,
+    error,
+    isLoading,
+    isValidating,
+    mutate,
+  } = useModelCatalog();
 
-  const activeModels = modelsData?.models ?? [defaultChatModel];
   const selectedModel =
-    activeModels.find((model) => model.id === selectedModelId) ??
-    defaultChatModel;
-  const [provider] = selectedModel.id.split("/");
+    modelsData?.models.find((model) => model.id === selectedModelId) ??
+    modelsData?.models[0];
+  const provider = selectedModel?.id.split("/")[0];
+  const retryCatalog = useCallback(() => mutate(), [mutate]);
+
+  useEffect(() => {
+    if (
+      selectedModel &&
+      !error &&
+      onModelChange &&
+      selectedModel.id !== selectedModelId
+    ) {
+      onModelChange(selectedModel.id);
+    }
+  }, [error, onModelChange, selectedModel, selectedModelId]);
 
   return (
     <ModelSelector onOpenChange={setOpen} open={open}>
@@ -778,24 +793,57 @@ function PureModelSelectorCompact({
           variant="ghost"
         >
           {provider ? <ModelSelectorLogo provider={provider} /> : null}
-          <ModelSelectorName>{selectedModel.name}</ModelSelectorName>
+          <ModelSelectorName>
+            {selectedModel?.name ?? "Select model"}
+          </ModelSelectorName>
         </Button>
       </ModelSelectorTrigger>
-      <ModelSelectorContent commandDefaultValue={selectedModel.id}>
+      <ModelSelectorContent commandDefaultValue={selectedModel?.id}>
         <ModelSelectorInput placeholder="Search models..." />
-        <ModelSelectorList>
-          <ModelSelectorGroup heading="Free models">
-            {activeModels.map((model) => (
-              <ModelSelectorOption
-                capabilities={modelsData?.capabilities}
-                key={model.id}
-                model={model}
-                onModelChange={onModelChange}
-                selectedModelId={selectedModel.id}
-                setOpen={setOpen}
-              />
-            ))}
-          </ModelSelectorGroup>
+        {error ? (
+          <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs">
+            <p className="text-muted-foreground" role="alert">
+              {error instanceof ChatbotError
+                ? error.message
+                : "Couldn't load OpenRouter models."}
+            </p>
+            <Button
+              disabled={isValidating}
+              onClick={retryCatalog}
+              size="xs"
+              type="button"
+              variant="outline"
+            >
+              Retry
+            </Button>
+          </div>
+        ) : isLoading ? (
+          <p className="px-3 py-2 text-muted-foreground text-xs" role="status">
+            Loading OpenRouter models…
+          </p>
+        ) : null}
+        <ModelSelectorList aria-busy={isLoading}>
+          {modelsData?.models.length ? (
+            <>
+              <ModelSelectorEmpty>No matching models.</ModelSelectorEmpty>
+              <ModelSelectorGroup heading="Free models">
+                {modelsData.models.map((model) => (
+                  <ModelSelectorOption
+                    capabilities={modelsData.capabilities}
+                    key={model.id}
+                    model={model}
+                    onModelChange={onModelChange}
+                    selectedModelId={selectedModel?.id ?? ""}
+                    setOpen={setOpen}
+                  />
+                ))}
+              </ModelSelectorGroup>
+            </>
+          ) : modelsData && !error ? (
+            <ModelSelectorEmpty>
+              No free OpenRouter models are available.
+            </ModelSelectorEmpty>
+          ) : null}
         </ModelSelectorList>
       </ModelSelectorContent>
     </ModelSelector>

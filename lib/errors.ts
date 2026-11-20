@@ -13,6 +13,7 @@ export type Surface =
   | "stream"
   | "database"
   | "history"
+  | "models"
   | "vote"
   | "document"
   | "suggestions"
@@ -29,6 +30,7 @@ export const visibilityBySurface: Record<Surface, ErrorVisibility> = {
   database: "log",
   document: "response",
   history: "response",
+  models: "response",
   provider: "response",
   stream: "response",
   suggestions: "response",
@@ -89,7 +91,16 @@ export function getMessageByErrorCode(errorCode: ErrorCode): string {
       return "The request couldn't be processed. Please check your input and try again.";
 
     case "offline:provider":
-      return "The site owner needs to set OPENROUTER_API_KEY before chat can send replies.";
+      return "The site owner needs to set OPENROUTER_API_KEY to connect to OpenRouter.";
+
+    case "forbidden:provider":
+      return "OpenRouter rejected the configured API key. The site owner should check the key and its permissions.";
+
+    case "offline:models":
+      return "Could not load models from OpenRouter. Try again.";
+
+    case "bad_request:models":
+      return "Choose a free model that is currently available from OpenRouter.";
 
     case "unauthorized:auth":
       return "You need to sign in before continuing.";
