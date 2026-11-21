@@ -61,6 +61,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   const { mutate } = useSWRConfig();
 
   const chatIdFromUrl = extractChatId(pathname);
+  const isChatPage = pathname === "/" || chatIdFromUrl !== null;
   const isNewChat = !chatIdFromUrl;
   const newChatIdRef = useRef(generateUUID());
   const prevPathnameRef = useRef(pathname);
@@ -216,7 +217,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const query = params.get("query");
-    if (query && !hasAppendedQueryRef.current) {
+    if (isChatPage && query && !hasAppendedQueryRef.current) {
       hasAppendedQueryRef.current = true;
       window.history.replaceState(
         {},
@@ -228,7 +229,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
         role: "user" as const,
       });
     }
-  }, [sendMessage, chatId]);
+  }, [sendMessage, chatId, isChatPage]);
 
   useAutoResume({
     autoResume: !isNewChat && !!chatData,
@@ -288,14 +289,14 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   const [firstMessage] = messages;
   const isDraft = chatId === newChatIdRef.current;
   const draftTitle = useMemo(() => {
-    if (!isDraft) {
+    if (!isChatPage || !isDraft) {
       return null;
     }
     if (firstMessage?.role === "user") {
       return titleFromFirstPrompt(firstMessage.parts);
     }
     return isNewChat ? "New chat" : null;
-  }, [firstMessage, isDraft, isNewChat]);
+  }, [firstMessage, isChatPage, isDraft, isNewChat]);
 
   return (
     <ActiveChatContext.Provider value={value}>

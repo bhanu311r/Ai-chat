@@ -25,7 +25,7 @@ export async function proxy(request: NextRequest) {
   const authPage = pathname === "/login" || pathname === "/register";
   if (token?.type === "regular") {
     return authPage
-      ? NextResponse.redirect(new URL(`${base}/`, request.url))
+      ? NextResponse.redirect(new URL(`${base}/roles`, request.url))
       : NextResponse.next();
   }
 

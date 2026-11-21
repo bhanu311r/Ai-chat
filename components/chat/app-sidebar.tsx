@@ -1,7 +1,8 @@
 "use client";
 
-import { PenSquareIcon, TrashIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { PenSquareIcon, ShieldCheckIcon, TrashIcon } from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import type { User } from "next-auth";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
@@ -39,9 +40,12 @@ import {
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
+  const isRolesPage = usePathname() === "/roles";
   const { setOpenMobile } = useSidebar();
   const { mutate } = useSWRConfig();
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
+
+  const closeMobile = useCallback(() => setOpenMobile(false), [setOpenMobile]);
 
   const handleNewChat = useCallback(() => {
     setOpenMobile(false);
@@ -76,6 +80,23 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           <SidebarGroup className="pt-1">
             <SidebarGroupContent>
               <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    className="rounded-lg data-active:bg-sidebar-accent"
+                    isActive={isRolesPage}
+                    tooltip="Roles"
+                  >
+                    <Link
+                      aria-current={isRolesPage ? "page" : undefined}
+                      href="/roles"
+                      onClick={closeMobile}
+                    >
+                      <ShieldCheckIcon className="size-4" />
+                      <span>Roles</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     className="h-8 rounded-lg border border-sidebar-border text-[13px] text-sidebar-foreground/70 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"

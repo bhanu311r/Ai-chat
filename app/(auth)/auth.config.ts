@@ -6,7 +6,7 @@ export const authConfig = {
   basePath: "/api/auth",
   callbacks: {},
   pages: {
-    newUser: `${base}/`,
+    newUser: `${base}/roles`,
     signIn: `${base}/login`,
   },
   providers: [],

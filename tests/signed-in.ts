@@ -11,7 +11,7 @@ export const test = base.extend({
       await page.getByLabel("Email").fill(`test-${randomUUID()}@example.test`);
       await page.getByLabel("Password").fill(randomUUID());
       await page.getByRole("button", { name: "Sign up" }).click();
-      await expect(page).toHaveURL("/");
+      await expect(page).toHaveURL("/roles");
       await use(await page.context().storageState());
     } finally {
       await page.context().close();

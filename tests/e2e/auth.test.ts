@@ -10,6 +10,8 @@ test.describe("Authentication Pages", () => {
     await expect(page).toHaveURL("/login");
     await page.goto(`/chat/${randomUUID()}`);
     await expect(page).toHaveURL("/login");
+    await page.goto("/roles");
+    await expect(page).toHaveURL("/login");
     expect((await request.get("/api/models")).status()).toBe(401);
     const providers = await request.get("/api/auth/providers");
     expect(Object.keys(await providers.json())).toEqual(["credentials"]);
@@ -22,13 +24,23 @@ test.describe("Authentication Pages", () => {
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill(password);
     await page.getByRole("button", { name: "Sign up" }).click();
-    await expect(page).toHaveURL("/");
+    await expect(page).toHaveURL("/roles");
     await page.getByTestId("user-nav-button").click();
     await page.getByText("Sign out", { exact: true }).click();
     await expect(page).toHaveURL("/login");
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill(password);
     await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page).toHaveURL("/roles");
+    await expect(page.getByRole("link", { name: "Roles" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+    await expect(
+      page.getByRole("table", { name: "Sample workspace roles" })
+    ).toBeVisible();
+    await expect(page.getByTestId("multimodal-input")).toHaveCount(0);
+    await page.getByRole("button", { name: "New chat" }).click();
     await expect(page.getByTestId("multimodal-input")).toBeVisible();
   });
 
