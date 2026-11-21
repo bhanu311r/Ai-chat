@@ -40,8 +40,20 @@ test.describe("Authentication Pages", () => {
       page.getByRole("table", { name: "Sample workspace roles" })
     ).toBeVisible();
     await expect(page.getByTestId("multimodal-input")).toHaveCount(0);
-    await page.getByRole("button", { name: "New chat" }).click();
+    await expect(page.getByRole("button", { name: "New chat" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Delete all" })).toHaveCount(
+      0
+    );
+    await expect(page.getByText("History", { exact: true })).toHaveCount(0);
+    await page.getByRole("link", { name: "Ai-chat" }).click();
     await expect(page.getByTestId("multimodal-input")).toBeVisible();
+    await expect(page.getByRole("button", { name: "New chat" })).toBeVisible();
+    await expect(page.getByText("History", { exact: true })).toBeVisible();
+    await page.getByRole("link", { name: "Roles" }).click();
+    await expect(page.getByText("History", { exact: true })).toHaveCount(0);
+    await expect(
+      page.getByRole("table", { name: "Sample workspace roles" })
+    ).toBeVisible();
   });
 
   test("login page renders correctly", async ({ page }) => {

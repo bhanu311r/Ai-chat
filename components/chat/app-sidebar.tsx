@@ -1,6 +1,11 @@
 "use client";
 
-import { PenSquareIcon, ShieldCheckIcon, TrashIcon } from "lucide-react";
+import {
+  MessageSquareIcon,
+  PenSquareIcon,
+  ShieldCheckIcon,
+  TrashIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { User } from "next-auth";
@@ -40,7 +45,9 @@ import {
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
-  const isRolesPage = usePathname() === "/roles";
+  const pathname = usePathname();
+  const isRolesPage = pathname === "/roles";
+  const isChatPage = pathname === "/" || pathname.startsWith("/chat/");
   const { setOpenMobile } = useSidebar();
   const { mutate } = useSWRConfig();
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
@@ -99,30 +106,57 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    className="h-8 rounded-lg border border-sidebar-border text-[13px] text-sidebar-foreground/70 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                    onClick={handleNewChat}
-                    tooltip="New Chat"
+                    asChild
+                    className="rounded-lg data-active:bg-sidebar-accent"
+                    isActive={isChatPage}
+                    tooltip="Ai-chat"
                   >
-                    <PenSquareIcon className="size-4" />
-                    <span className="font-medium">New chat</span>
+                    <Link
+                      aria-current={isChatPage ? "page" : undefined}
+                      href="/"
+                      onClick={closeMobile}
+                    >
+                      <MessageSquareIcon className="size-4" />
+                      <span>Ai-chat</span>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                {user ? (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      className="rounded-lg text-sidebar-foreground/40 transition-colors duration-150 hover:bg-destructive/10 hover:text-destructive"
-                      onClick={handleShowDeleteAllDialog}
-                      tooltip="Delete All Chats"
-                    >
-                      <TrashIcon className="size-4" />
-                      <span className="text-[13px]">Delete all</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ) : null}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-          <SidebarHistory user={user} />
+          {isChatPage ? (
+            <>
+              <SidebarGroup className="pt-1">
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        className="h-8 rounded-lg border border-sidebar-border text-[13px] text-sidebar-foreground/70 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                        onClick={handleNewChat}
+                        tooltip="New Chat"
+                      >
+                        <PenSquareIcon className="size-4" />
+                        <span className="font-medium">New chat</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    {user ? (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          className="rounded-lg text-sidebar-foreground/40 transition-colors duration-150 hover:bg-destructive/10 hover:text-destructive"
+                          onClick={handleShowDeleteAllDialog}
+                          tooltip="Delete All Chats"
+                        >
+                          <TrashIcon className="size-4" />
+                          <span className="text-[13px]">Delete all</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ) : null}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+              <SidebarHistory user={user} />
+            </>
+          ) : null}
         </SidebarContent>
         <SidebarFooter className="border-t border-sidebar-border/60 p-2">
           {user ? <SidebarUserNav user={user} /> : null}
@@ -132,7 +166,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
       <AlertDialog
         onOpenChange={setShowDeleteAllDialog}
-        open={showDeleteAllDialog}
+        open={isChatPage && showDeleteAllDialog}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
