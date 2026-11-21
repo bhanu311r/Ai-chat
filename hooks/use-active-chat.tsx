@@ -2,6 +2,7 @@
 
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { useChat } from "@ai-sdk/react";
+import { SPEC_DATA_PART_TYPE } from "@json-render/core";
 import { DefaultChatTransport } from "ai";
 import { usePathname } from "next/navigation";
 import {
@@ -108,6 +109,9 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
     id: chatId,
     messages: initialMessages,
     onData: (dataPart) => {
+      if (dataPart.type === SPEC_DATA_PART_TYPE) {
+        return;
+      }
       if (dataPart.type === "data-waiting-status") {
         setWaitingStatus(dataPart.data);
         return;

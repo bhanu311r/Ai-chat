@@ -1,3 +1,4 @@
+import { pipeJsonRender } from "@json-render/core";
 import { geolocation, ipAddress } from "@vercel/functions";
 import {
   APICallError,
@@ -8,6 +9,7 @@ import {
   isStepCount,
   RetryError,
   streamText,
+  type ToolSet,
   toUIMessageStream,
 } from "ai";
 import { checkBotId } from "botid/server";
@@ -38,6 +40,7 @@ import {
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
 import { checkIpRateLimit } from "@/lib/ratelimit";
+import { chatCatalog } from "@/lib/render/catalog";
 import type { ChatMessage, WaitingStatusData } from "@/lib/types";
 import { convertToUIMessages, generateUUID } from "@/lib/utils";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
@@ -45,6 +48,12 @@ import { type PostRequestBody, postRequestBodySchema } from "./schema";
 export const maxDuration = 60;
 
 const WAITING_STATUS_DELAY_MS = 9000;
+const inlineUIPrompt = chatCatalog.prompt({
+  customRules: [
+    "When the user asks for an interactive component in chat, render it inline. Use artifact tools for separate documents, scripts, and spreadsheets.",
+  ],
+  mode: "inline",
+});
 
 function isModelStreamActivity(chunk: { type: string }) {
   return !["start", "start-step", "finish-step", "finish", "raw"].includes(
@@ -283,7 +292,10 @@ export async function POST(request: Request) {
                 "requestSuggestions",
               ]
             : [],
-          instructions: systemPrompt({ requestHints, supportsTools }),
+          instructions: [
+            systemPrompt({ requestHints, supportsTools }),
+            inlineUIPrompt,
+          ].join("\n\n"),
           messages: modelMessages,
           model: getLanguageModel(chatModel),
           onAbort() {
@@ -327,11 +339,13 @@ export async function POST(request: Request) {
         });
 
         dataStream.merge(
-          toUIMessageStream({
-            onError: getProviderErrorMessage,
-            sendReasoning: isReasoningModel,
-            stream: result.stream,
-          })
+          pipeJsonRender(
+            toUIMessageStream<ToolSet, ChatMessage>({
+              onError: getProviderErrorMessage,
+              sendReasoning: isReasoningModel,
+              stream: result.stream,
+            })
+          )
         );
       },
       generateId: generateUUID,

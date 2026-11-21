@@ -2,6 +2,7 @@
 @import "katex/dist/katex.min.css";
 
 @source "../node_modules/streamdown/dist/index.js";
+@source "../node_modules/@json-render/shadcn/dist/index.mjs";
 
 @custom-variant dark (&:is(.dark, .dark *));
 

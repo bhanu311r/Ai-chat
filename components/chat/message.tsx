@@ -1,5 +1,7 @@
 "use client";
 import type { UseChatHelpers } from "@ai-sdk/react";
+import { SPEC_DATA_PART_TYPE } from "@json-render/core";
+import dynamic from "next/dynamic";
 import { useCallback } from "react";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
@@ -21,6 +23,8 @@ import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
 import { Weather } from "./weather";
+
+const RenderedUI = dynamic(() => import("./rendered-ui"));
 
 function WaitingText() {
   const { waitingStatus } = useDataStream();
@@ -113,6 +117,9 @@ const PurePreviewMessage = ({
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
 
+  const firstSpecIndex = isAssistant
+    ? message.parts.findIndex((part) => part.type === SPEC_DATA_PART_TYPE)
+    : -1;
   const hasAnyContent = message.parts?.some(
     (part) =>
       (part.type === "text" && part.text?.trim().length > 0) ||
@@ -121,7 +128,8 @@ const PurePreviewMessage = ({
         part.text?.trim().length > 0) ||
       part.type.startsWith("tool-")
   );
-  const isThinking = isAssistant && isLoading && !hasAnyContent;
+  const isThinking =
+    isAssistant && isLoading && !hasAnyContent && firstSpecIndex === -1;
 
   const attachments = attachmentsFromMessage.length > 0 && (
     <div
@@ -158,6 +166,12 @@ const PurePreviewMessage = ({
   const parts = message.parts?.map((part, index) => {
     const { type } = part;
     const key = `message-${message.id}-part-${index}`;
+
+    if (type === SPEC_DATA_PART_TYPE) {
+      return index === firstSpecIndex ? (
+        <RenderedUI key={key} loading={isLoading} parts={message.parts} />
+      ) : null;
+    }
 
     if (type === "reasoning") {
       if (!mergedReasoning.rendered && mergedReasoning.text) {

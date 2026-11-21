@@ -1,3 +1,4 @@
+import type { SPEC_DATA_PART, SpecDataPart } from "@json-render/core";
 import type { InferUITool, UIMessage } from "ai";
 import { z } from "zod";
 import type { ArtifactKind } from "@/components/chat/artifact";
@@ -35,6 +36,7 @@ export type WaitingStatusData = {
 };
 
 export type CustomUIDataTypes = {
+  [SPEC_DATA_PART]: SpecDataPart;
   textDelta: string;
   imageDelta: string;
   sheetDelta: string;
