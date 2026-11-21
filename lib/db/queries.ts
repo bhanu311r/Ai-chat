@@ -10,6 +10,7 @@ import {
   gte,
   inArray,
   lt,
+  or,
   type SQL,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -149,7 +150,7 @@ export async function getChatsByUserId({
             ? and(whereCondition, eq(chat.userId, id))
             : eq(chat.userId, id)
         )
-        .orderBy(desc(chat.createdAt))
+        .orderBy(desc(chat.createdAt), desc(chat.id))
         .limit(extendedLimit);
 
     let filteredChats: Chat[] = [];
@@ -158,7 +159,7 @@ export async function getChatsByUserId({
       const [selectedChat] = await db
         .select()
         .from(chat)
-        .where(eq(chat.id, startingAfter))
+        .where(and(eq(chat.id, startingAfter), eq(chat.userId, id)))
         .limit(1);
 
       if (!selectedChat) {
@@ -168,12 +169,20 @@ export async function getChatsByUserId({
         );
       }
 
-      filteredChats = await query(gt(chat.createdAt, selectedChat.createdAt));
+      filteredChats = await query(
+        or(
+          gt(chat.createdAt, selectedChat.createdAt),
+          and(
+            eq(chat.createdAt, selectedChat.createdAt),
+            gt(chat.id, selectedChat.id)
+          )
+        )
+      );
     } else if (endingBefore) {
       const [selectedChat] = await db
         .select()
         .from(chat)
-        .where(eq(chat.id, endingBefore))
+        .where(and(eq(chat.id, endingBefore), eq(chat.userId, id)))
         .limit(1);
 
       if (!selectedChat) {
@@ -183,7 +192,15 @@ export async function getChatsByUserId({
         );
       }
 
-      filteredChats = await query(lt(chat.createdAt, selectedChat.createdAt));
+      filteredChats = await query(
+        or(
+          lt(chat.createdAt, selectedChat.createdAt),
+          and(
+            eq(chat.createdAt, selectedChat.createdAt),
+            lt(chat.id, selectedChat.id)
+          )
+        )
+      );
     } else {
       filteredChats = await query();
     }

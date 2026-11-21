@@ -1,7 +1,6 @@
 "use client";
 
-import { Layers3, PanelLeftIcon, PenSquareIcon, TrashIcon } from "lucide-react";
-import Link from "next/link";
+import { PenSquareIcon, TrashIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { User } from "next-auth";
 import { useCallback, useState } from "react";
@@ -37,21 +36,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../ui/alert-dialog";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
-  const { setOpenMobile, toggleSidebar } = useSidebar();
+  const { setOpenMobile } = useSidebar();
   const { mutate } = useSWRConfig();
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
-
-  const closeMobile = useCallback(() => {
-    setOpenMobile(false);
-  }, [setOpenMobile]);
-
-  const handleToggleSidebar = useCallback(() => {
-    toggleSidebar();
-  }, [toggleSidebar]);
 
   const handleNewChat = useCallback(() => {
     setOpenMobile(false);
@@ -79,46 +69,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   return (
     <>
       <Sidebar collapsible="icon">
-        <SidebarHeader className="pb-0 pt-3">
-          <SidebarMenu>
-            <SidebarMenuItem className="flex flex-row items-center justify-between">
-              <div className="group/logo relative flex items-center justify-center">
-                <SidebarMenuButton
-                  asChild
-                  className="w-auto gap-2 font-semibold group-data-[collapsible=icon]:group-hover/logo:opacity-0"
-                  tooltip="Ai-chat"
-                >
-                  <Link
-                    aria-label="Ai-chat home"
-                    href="/"
-                    onClick={closeMobile}
-                  >
-                    <Layers3 className="size-4" />
-                    <span className="group-data-[collapsible=icon]:hidden">
-                      Ai-chat
-                    </span>
-                  </Link>
-                </SidebarMenuButton>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <SidebarMenuButton
-                      aria-label="Open sidebar"
-                      className="pointer-events-none absolute inset-0 size-8 opacity-0 group-data-[collapsible=icon]:pointer-events-auto group-data-[collapsible=icon]:group-hover/logo:opacity-100"
-                      onClick={handleToggleSidebar}
-                    >
-                      <PanelLeftIcon className="size-4" />
-                    </SidebarMenuButton>
-                  </TooltipTrigger>
-                  <TooltipContent className="hidden md:block" side="right">
-                    Open sidebar
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <div className="group-data-[collapsible=icon]:hidden">
-                <SidebarTrigger className="text-sidebar-foreground/60 transition-colors duration-150 hover:text-sidebar-foreground" />
-              </div>
-            </SidebarMenuItem>
-          </SidebarMenu>
+        <SidebarHeader className="items-end px-2 pt-3 pb-0">
+          <SidebarTrigger className="text-sidebar-foreground/70" />
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup className="pt-1">

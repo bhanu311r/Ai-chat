@@ -32,11 +32,11 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
     redirect("/login");
   }
 
-  const isCollapsed = cookieStore.get("sidebar_state")?.value !== "true";
+  const sidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
 
   return (
     <ActiveChatProvider>
-      <SidebarProvider defaultOpen={!isCollapsed}>
+      <SidebarProvider defaultOpen={sidebarOpen}>
         <AppSidebar user={session.user} />
         <SidebarInset>
           <Toaster

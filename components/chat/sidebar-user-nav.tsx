@@ -31,6 +31,7 @@ export function SidebarUserNav({ user }: { user: User }) {
     [dark, setTheme]
   );
   const name = user.name?.trim() || user.email?.split("@")[0] || "Account";
+  const accountLabel = user.email || name;
   const initials = name
     .split(/[\s._-]+/)
     .filter(Boolean)
@@ -45,9 +46,10 @@ export function SidebarUserNav({ user }: { user: User }) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
-              aria-label={`Account menu for ${name}`}
-              className="h-10 gap-2.5 rounded-md px-2 text-sidebar-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0!"
+              aria-label={`Account menu for ${accountLabel}`}
+              className="min-h-10 h-auto gap-2.5 py-1 rounded-md px-2 text-sidebar-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0!"
               data-testid="user-nav-button"
+              title={accountLabel}
             >
               <span
                 aria-hidden="true"
@@ -55,8 +57,8 @@ export function SidebarUserNav({ user }: { user: User }) {
               >
                 {initials || "A"}
               </span>
-              <span className="min-w-0 flex-1 truncate font-medium text-foreground group-data-[collapsible=icon]:hidden">
-                {name}
+              <span className="min-w-0 flex-1 break-all text-xs leading-tight font-medium text-foreground group-data-[collapsible=icon]:hidden">
+                {accountLabel}
               </span>
               <Ellipsis
                 aria-hidden="true"

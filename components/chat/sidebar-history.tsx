@@ -1,7 +1,6 @@
 "use client";
 
 import { isToday, isYesterday, subMonths, subWeeks } from "date-fns";
-import { motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
 import type { User } from "next-auth";
 import { useCallback, useState } from "react";
@@ -17,6 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -27,7 +27,6 @@ import {
 import { useDraftHistoryTitle } from "@/hooks/use-draft-history-title";
 import type { Chat } from "@/lib/db/schema";
 import { fetcher } from "@/lib/utils";
-import { LoaderIcon } from "./icons";
 import { ChatItem } from "./sidebar-history-item";
 
 type GroupedChats = {
@@ -90,13 +89,13 @@ export function getChatHistoryPaginationKey(
     return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history?limit=${PAGE_SIZE}`;
   }
 
-  const firstChatFromPage = previousPageData.chats.at(-1);
+  const lastChatFromPage = previousPageData.chats.at(-1);
 
-  if (!firstChatFromPage) {
+  if (!lastChatFromPage) {
     return null;
   }
 
-  return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history?ending_before=${firstChatFromPage.id}&limit=${PAGE_SIZE}`;
+  return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history?ending_before=${lastChatFromPage.id}&limit=${PAGE_SIZE}`;
 }
 
 export function SidebarHistory({ user }: { user: User | undefined }) {
@@ -106,6 +105,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
 
   const {
     data: paginatedChatHistories,
+    error: historyError,
     setSize,
     isValidating,
     isLoading,
@@ -162,11 +162,8 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     setShowDeleteDialog(true);
   }, []);
 
-  const handleViewportEnter = useCallback(() => {
-    if (!isLoading && !isValidating && !hasReachedEnd) {
-      setSize((size) => size + 1);
-    }
-  }, [hasReachedEnd, isLoading, isValidating, setSize]);
+  const loadMore = useCallback(() => setSize((size) => size + 1), [setSize]);
+  const retryHistory = useCallback(() => mutate(), [mutate]);
 
   if (!user) {
     return (
@@ -209,7 +206,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     );
   }
 
-  if (!savedChats.length && !showDraft) {
+  if (!savedChats.length && !showDraft && !historyError) {
     return (
       <SidebarGroup className="group-data-[collapsible=icon]:hidden">
         <SidebarGroupLabel className="text-xs font-medium text-muted-foreground">
@@ -338,16 +335,31 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
               : null}
           </SidebarMenu>
 
-          <motion.div onViewportEnter={handleViewportEnter} />
-
-          {hasReachedEnd ? null : (
-            <div className="mt-1 flex flex-row items-center gap-2 px-4 py-2 text-sidebar-foreground/50">
-              <div className="animate-spin">
-                <LoaderIcon />
-              </div>
-              <div className="text-[11px]">Loading...</div>
+          {historyError ? (
+            <div
+              className="px-2 py-2 text-xs text-muted-foreground"
+              role="status"
+            >
+              <p>Couldn’t load chat history.</p>
+              <Button
+                disabled={isValidating}
+                onClick={retryHistory}
+                size="xs"
+                variant="ghost"
+              >
+                Retry
+              </Button>
             </div>
-          )}
+          ) : !hasReachedEnd && savedChats.length > 0 ? (
+            <Button
+              disabled={isValidating}
+              onClick={loadMore}
+              size="xs"
+              variant="ghost"
+            >
+              {isValidating ? "Loading chats…" : "Load older chats"}
+            </Button>
+          ) : null}
         </SidebarGroupContent>
       </SidebarGroup>
 
